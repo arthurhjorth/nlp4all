@@ -164,18 +164,18 @@ def add_project(name, description, org, cat_ids):
         db.session.commit()
         return(project)
 
-def add_matrix(cat_ids):
-       # print(description)
+def add_matrix(cat_ids, ratio):
         cats_objs = TweetTagCategory.query.filter(TweetTagCategory.id.in_(cat_ids)).all()
         tweet_objs = [t for cat in cats_objs for t in cat.tweets]
         tweet_ids = [t.id for t in tweet_objs]
         tf_idf = tf_idf_from_tweets_and_cats_objs(tweet_objs, cats_objs)
         tweet_id_and_cat = { t.id : t.category for t in tweet_objs }
-        training_and_test_sets = create_n_train_and_test_sets(30, tweet_id_and_cat)
-        matrix = ConfusionMatrix(categories = cats_objs, tweets = tweet_ids, tf_idf = tf_idf, training_and_test_sets = training_and_test_sets)
+        training_and_test_sets = create_n_split_tnt_sets(30, ratio, tweet_id_and_cat)
+        matrix_data = {'good_tweets': {}, 'bad_tweets' : {}}
+        matrix = ConfusionMatrix(categories = cats_objs, tweets = tweet_objs, tf_idf = tf_idf, training_and_test_sets = training_and_test_sets, train_data = {"counts" : 0, "words" : {}}, matrix_data = matrix_data, threshold = 0.2)
         db.session.add(matrix)
         db.session.commit()
-        return(project)
+        return(matrix)
 
 def create_n_train_and_test_sets(n, dict_of_tweets_and_cats):
         # takes a list of tups each containing a tweet_id and tweet_category
@@ -192,6 +192,23 @@ def split_dict(adict):
         n = len(keys) // 2
         random.shuffle(keys)
         return ( { k : adict[k] for k in keys[:n] } , { k : adict[k] for k in keys[n:] } )
+
+# new split to training and testing - with changing the relative sizes
+def n_split_dict(adict, split):
+    keys = list(adict.keys())
+    n = int(len(keys) * split)
+    random.shuffle(keys)
+    ## TODO: equally distributed categories in both sets
+    return ( { k : adict[k] for k in keys[:n] } , { k : adict[k] for k in keys[n:] } )
+
+def create_n_split_tnt_sets(n, split, dict_of_tweets_and_cats):
+    return_list = []
+    #half = int(len(dict_of_tweets_and_cats) / 2)
+    for n in range(n):
+        d1, d2 = n_split_dict(dict_of_tweets_and_cats, split)
+        return_list.append( (d1, d2) )
+    return return_list
+
 
 def tf_idf_from_tweets_and_cats_objs(tweets, cats):
         tf_idf = {}

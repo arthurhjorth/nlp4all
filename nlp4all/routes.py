@@ -5,7 +5,7 @@ from random import sample, shuffle
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request, abort, jsonify
 from nlp4all import app, db, bcrypt, mail
-from nlp4all.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, RequestResetForm, ResetPasswordForm, AddOrgForm, AddBayesianAnalysisForm, AddProjectForm, TaggingForm, AddTweetCategoryForm, AddTweetCategoryForm, AddBayesianRobotForm, TagButton, AddBayesianRobotFeatureForm, BayesianRobotForms, CreateMatrixForm
+from nlp4all.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, RequestResetForm, ResetPasswordForm, AddOrgForm, AddBayesianAnalysisForm, AddProjectForm, TaggingForm, AddTweetCategoryForm, AddTweetCategoryForm, AddBayesianRobotForm, TagButton, AddBayesianRobotFeatureForm, BayesianRobotForms, CreateMatrixForm, ThresholdForm
 from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag, BayesianRobot, Tweet, ConfusionMatrix
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_mail import Message
@@ -520,60 +520,79 @@ def reset_token(token):
 @app.route("/create_matrix", methods=['GET', 'POST'])
 def create_matrix():
     form = CreateMatrixForm()
-
     form.categories.choices = [( str(s.id), s.name ) for s in TweetTagCategory.query.all()]
    
     if form.validate_on_submit():
-        #userid = current_user.id
-        
         cats = [int(n) for n in form.categories.data]
         tweets = Tweet.query.filter(Tweet.category.in_(cats)).all()
-        # tnt_set = 
-        matrix = nlp4all.utils.add_matrix(cat_ids=cats)
-        
-       # matrix = ConfusionMatrix(tweets = tweets, categories = cats)
+        ratio = form.ratio.data
+        matrix = nlp4all.utils.add_matrix(cat_ids=cats, ratio=ratio)
+    
         db.session.add(matrix)
         db.session.commit()
         return(redirect(url_for('create_matrix')))
     return render_template('create_matrix.html', form=form)
 
-
-
-@app.route("/matrix", methods=['GET', 'POST'])
-def matrix():
-    # so now it is still tied to an analysis
-    analysis_id = request.args.get('analysis', 1, type=int)
-    analysis = BayesianAnalysis.query.get(analysis_id)
-    project = Project.query.get(analysis.project) # how to get a project without analysis?
-    categories = TweetTagCategory.query.filter(TweetTagCategory.id.in_([p.id for p in project.categories])).all() # TODO: pretty sure we can just get project.categories
+@app.route("/matrix/<matrix_id>", methods=['GET', 'POST'])
+def matrix(matrix_id):
+    
+    matrix = ConfusionMatrix.query.get(matrix_id)
+    categories = matrix.categories
     cat_names = [c.name for c in categories]
-    #matrix = 
-   # tweets = project.tweets
-    threshold = 0.15 # make interactive with a form
-    tnt_sets = project.training_and_test_sets
-    a_training_set = sample(tnt_sets, 1)[0]
-    train_tweets = a_training_set[0].keys()
-    test_tweets = a_training_set[1].keys()
+    form = ThresholdForm()
+    tnt_sets = matrix.training_and_test_sets
 
+    if "tnt_nr" in request.args.to_dict().keys():
+            tnt_nr = request.args.get('tnt_nr', type=int)
+            a_tnt_set = tnt_sets[tnt_nr]
+    else:
+        a_tnt_set = tnt_sets[0]
+
+    if form.validate_on_submit():
+        if form.threshold.data:
+            matrix.threshold = form.threshold.data
+            flag_modified(matrix, "threshold")
+            db.session.add(matrix)
+            db.session.merge(matrix)
+            db.session.flush()
+            db.session.commit()
+        if form.ratio.data:
+            ratio = form.ratio.data * 0.01
+            matrix.training_and_test_sets = matrix.update_tnt_set(ratio)
+            flag_modified(matrix, "training_and_test_sets")
+            db.session.add(matrix)
+            db.session.merge(matrix)
+            db.session.flush()
+            db.session.commit()
+        if form.shuffle.data:
+            tnt_list = list(range(0, len(tnt_sets)))
+            tnt_nr = sample(tnt_list, 1)[0]
+            a_tnt_set = tnt_sets[tnt_nr] # tnt_set id
+            return redirect(url_for('matrix', matrix_id=matrix.id, tnt_nr= tnt_nr)) 
+        return redirect(url_for('matrix', matrix_id=matrix.id))
+
+    train_tweet_ids = a_tnt_set[0].keys()
+    train_set_size = len(a_tnt_set[0].keys())
+    test_tweets = [Tweet.query.get(tweet_id) for tweet_id in a_tnt_set[1].keys()]
 
     # train on the training set:
-    for tweet_id in train_tweets:
-        
+    for tweet_id in train_tweet_ids:
         tweet = Tweet.query.get(tweet_id)
         category_id = tweet.category
         category = TweetTagCategory.query.get(category_id)
-        self.trainset = matrix.update_trainset(tweet, category) 
-    flag_modified(confusionmatrix, "data")
-    db.session.add(confusionmatrix)
-    db.session.merge(confusionmatrix)
+        matrix.train_data = matrix.updated_data(tweet, category) 
+    flag_modified(matrix, "train_data")
+    db.session.add(matrix)
+    db.session.merge(matrix)
     db.session.flush()
     db.session.commit()
-    # loop 
-    matrix_data = {t.id : {"predictions" : 0, "pred_cat" : ''} for t in tweets}
-    words = {t.id : '' for t in tweets}
 
-    for a_tweet in tweets: # change to testing set?
-        words[a_tweet.id], matrix_data[a_tweet.id]['predictions'] = analysis.get_predictions_and_words(set(a_tweet.words))
+    # predictions for the test set
+    matrix_data = {t.id : {"predictions" : 0, "pred_cat" : '', "certainty" : 0} for t in test_tweets}
+    words = {t.id : '' for t in test_tweets}
+
+    for a_tweet in test_tweets: 
+        words[a_tweet.id], matrix_data[a_tweet.id]['predictions'] = matrix.get_predictions_and_words(set(a_tweet.words))
         # if no data
         if bool(matrix_data[a_tweet.id]['predictions']) == False:  
             matrix_data[a_tweet.id]['pred_cat'] = ('no data', 0)
@@ -583,35 +602,116 @@ def matrix():
         # else select the bigger prob
         else: 
             matrix_data[a_tweet.id]['pred_cat'] = (max(matrix_data[a_tweet.id]['predictions'].items(), key=operator.itemgetter(1))) 
+            # certainty = difference in predictions
+            matrix_data[a_tweet.id]['certainty'] = abs(matrix_data[a_tweet.id]['predictions'][cat_names[0]] - matrix_data[a_tweet.id]['predictions'][cat_names[1]])
         # add real category
         matrix_data[a_tweet.id]['real_cat'] = a_tweet.handle
 
     # filter threshold tweets
-    good_tweets = {t: {'pred_cat': matrix_data.get(t, {}).get('pred_cat')[0], 'pred_prob' : matrix_data.get(t, {}).get('pred_cat')[1], 'real_cat' : matrix_data.get(t, {}).get('real_cat')} for t in matrix_data if matrix_data.get(t, {}).get('pred_cat')[1] >= threshold}
+    good_tweets = sorted([t for t in matrix_data.items() if t[1]['certainty'] >= matrix.threshold], key=lambda x:x[1]["certainty"], reverse=True)
     # tweets not exceeding the threshold
-    bad_tweets = {t: {'pred_cat': matrix_data.get(t, {}).get('pred_cat')[0], 'pred_prob' : matrix_data.get(t, {}).get('pred_cat')[1], 'real_cat' : matrix_data.get(t, {}).get('real_cat')} for t in matrix_data if matrix_data.get(t, {}).get('pred_cat')[1] < threshold}
+    bad_tweets = sorted([t for t in matrix_data.items() if t[1]['certainty'] < matrix.threshold], key=lambda x:x[1]["certainty"], reverse=True)
 
-    m_info = sorted([t for t in good_tweets.items()], key=lambda x:x[1]["pred_prob"], reverse=True)
-    
     # add matrix classes
-    for t in m_info:
-        if t[1]['pred_cat'] == t[1]['real_cat'] and t[1]['pred_cat'] == cat_names[0]:
+    for t in good_tweets:
+        if t[1]['pred_cat'][0] == t[1]['real_cat'] and t[1]['pred_cat'][0] == cat_names[0]:
             t[1]['class'] = 'TP'
-        elif t[1]['pred_cat'] == t[1]['real_cat'] and t[1]['pred_cat'] != cat_names[0]:
+        elif t[1]['pred_cat'][0] == t[1]['real_cat'] and t[1]['pred_cat'][0] != cat_names[0]:
             t[1]['class'] = 'TN'
         # predicted 'yes', although was 'no'
-        elif t[1]['pred_cat'] != t[1]['real_cat'] and t[1]['pred_cat'] == cat_names[0]:
+        elif t[1]['pred_cat'][0] != t[1]['real_cat'] and t[1]['pred_cat'][0] == cat_names[0]:
             t[1]['class'] = 'FP'
         # predicted 'no', although was 'yes'
-        elif t[1]['pred_cat'] != t[1]['real_cat'] and t[1]['pred_cat'] != cat_names[0]:
+        elif t[1]['pred_cat'][0] != t[1]['real_cat'] and t[1]['pred_cat'][0] != cat_names[0]:
             t[1]['class'] = 'FN'
 
-    class_list = [t[1]['class'] for t in m_info]
+    matrix.matrix_data['good_tweets'] = {i[0]: i[1] for i in good_tweets}
+    matrix.matrix_data['bad_tweets'] = {i[0]: i[1] for i in bad_tweets}
+    flag_modified(matrix, "matrix_data")
+    db.session.add(matrix)
+    db.session.merge(matrix)
+    db.session.flush()
+    db.session.commit()
+
     # count different occurences
-    matrix_classes = {i:class_list.count(i) for i in class_list}
+    class_list = [t[1]['class'] for t in good_tweets]
+    matrix_classes = {'TP': 0, 'TN': 0, 'FP': 0,'FN': 0}
+    for i in set(class_list):
+        matrix_classes[i] = class_list.count(i)
+    len_data = [len(matrix.matrix_data['good_tweets']), len(matrix.matrix_data['bad_tweets']), len(test_tweets), sum(matrix_classes.values())]
+    accuracy = round((matrix_classes['TP'] + matrix_classes['TN'] )/ len_data[3], 3)
+
+    return render_template('confmatrix.html', matrix_classes=matrix_classes, cat_names = cat_names, form=form, len_data=len_data, matrix=matrix, accuracy = accuracy, train_set_size=train_set_size)
+  
+
+@app.route("/matrix_tweets/<matrix_id>", methods=['GET', 'POST'])
+def matrix_tweets(matrix_id):
+    matrix = ConfusionMatrix.query.get(matrix_id)
+    cm = request.args.get('cm', type=str) ### check this !?
+    title = str("Tweets classified as " + cm)
+    id_c = [{int(k):{'certainty':v['certainty']} for k, v in matrix.matrix_data['good_tweets'].items() if v['class'] == cm}][0]
+    tweets = Tweet.query.filter(Tweet.id.in_(id_c.keys())).all()
+
+    cm_info = { t.id : {'text' : t.full_text, 'category': t.handle,'certainty' : round(id_c[t.id]['certainty'],3) } for t in tweets}
+    cm_info = sorted([t for t in cm_info.items()], key=lambda x:x[1]["certainty"], reverse=True)
+    cm_info = [t[1] for t in cm_info]
+    return render_template('cm_tweets.html', cm_info = cm_info, matrix=matrix, title=title)
+
+
+@app.route("/my_matrices", methods=['GET', 'POST'])
+def my_matrices():
+    matrices = ConfusionMatrix.query.all()
+
+    form = CreateMatrixForm()
+    form.categories.choices = [( str(s.id), s.name ) for s in TweetTagCategory.query.all()]
+   
+    if form.validate_on_submit():
+        cats = [int(n) for n in form.categories.data]
+        tweets = Tweet.query.filter(Tweet.category.in_(cats)).all()
+        ratio = form.ratio.data*0.01 # convert back to decimals
+        matrix = nlp4all.utils.add_matrix(cat_ids=cats, ratio=ratio)
     
-    # update data
+        db.session.add(matrix)
+        db.session.commit()
+        return(redirect(url_for('my_matrices')))
 
-    # commit etc
+    return render_template('my_matrices.html', matrices=matrices, form=form) 
 
-    return render_template('confmatrix.html', matrix_classes=matrix_classes, cat_names = cat_names)
+@app.route("/included_tweets/<matrix_id>", methods=['GET', 'POST'])
+def included_tweets(matrix_id):
+    matrix = ConfusionMatrix.query.get(matrix_id)
+    title = "Included tweets"
+    #matrix_table = {'TP': {}, 'TN': {}, 'FP': {},'FN': {}}
+    id_c = [{int(k):{'certainty':v['certainty'], 'pred_cat':v['pred_cat'][0],  'class' : v['class']} for k, v in matrix.matrix_data['good_tweets'].items()}][0]
+    
+    #for c in matrix_table.keys():
+    #    matrix_table[c] = {id_c = [{int(k):{'certainty':v['certainty'], 'pred_cat':v['pred_cat'][0]} for k, v in matrix.matrix_data['good_tweets'].items()}][0]
+    tweets = Tweet.query.filter(Tweet.id.in_(id_c.keys())).all()
+
+    cm_info = { t.id : {'text' : t.full_text, 'category': t.handle, 'predicted category': id_c[t.id]['pred_cat'], 'class' : id_c[t.id]['class'] , 'certainty' : round(id_c[t.id]['certainty'],3) } for t in tweets}
+    for t in cm_info:
+        if cm_info[t]['predicted category'] == cm_info[t]['category']:
+            cm_info[t]['correct'] = 1
+        else:
+            cm_info[t]['correct'] = 0
+    cm_info = sorted([t for t in cm_info.items()], key=lambda x:x[1]["certainty"], reverse=True)
+    cm_info = [t[1] for t in cm_info]
+    return render_template('cm_tweets.html', cm_info = cm_info, matrix=matrix, title = title)
+
+@app.route("/excluded_tweets/<matrix_id>", methods=['GET', 'POST'])
+def excluded_tweets(matrix_id):
+    matrix = ConfusionMatrix.query.get(matrix_id)
+    title = 'Excluded tweets'
+    cm = request.args.get('cm', type=str) ## check this !?
+    id_c = [{int(k):{'certainty':v['certainty'], 'pred_cat':v['pred_cat'][0]} for k, v in matrix.matrix_data['bad_tweets'].items()}][0]
+    tweets = Tweet.query.filter(Tweet.id.in_(id_c.keys())).all()
+
+    cm_info = { t.id : {'text' : t.full_text, 'category': t.handle, 'predicted category': id_c[t.id]['pred_cat'], 'certainty' : round(id_c[t.id]['certainty'],3) } for t in tweets}
+    for t in cm_info:
+        if cm_info[t]['predicted category'] == cm_info[t]['category']:
+            cm_info[t]['correct'] = 1
+        else:
+            cm_info[t]['correct'] = 0
+    cm_info = sorted([t for t in cm_info.items()], key=lambda x:x[1]["certainty"], reverse=True)
+    cm_info = [t[1] for t in cm_info]
+    return render_template('cm_tweets.html', cm_info = cm_info, matrix=matrix, title = title)

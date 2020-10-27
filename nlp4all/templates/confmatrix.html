@@ -2,12 +2,60 @@
 
 {% block content %}
 
-        <h1> "Confusing Matrix" </h1>
-        <table class="table table-bordered" >
-            <thead><tr><th><a>Confusion Matrix</a></th><th>Predicted {{ cat_names[0] }}</th><th>Predicted {{ cat_names[1] }}</th><th>Correct predictions</th></tr></thead>
-            <tbody><tr><th>True {{ cat_names[0] }}</th><td>{{ matrix_classes['TP'] }}</td><td>{{ matrix_classes['FN'] }}</td><<th>{{ matrix_classes['TP'] }} /  all_cat1 </th></tbody></tr>
-            <tbody><tr><th>True {{ cat_names[1] }}</th></td><td>{{ matrix_classes['FP'] }}</td><td>{{ matrix_classes['TN'] }}</td><th>{{ matrix_classes['TN'] }} / all_cat2 </th></tbody></tr>
-            
-        </table>
+    <h1> Confusion Matrix </h1>
+    <br>
+    <p><i>Trained on {{ train_set_size }} tweets. </i></p>
+   
+    <table class="table table-bordered" >
+        <thead><tr><th><a>Confusion Matrix</a></th><th>Predicted {{ cat_names[0] }}</th><th>Predicted {{ cat_names[1] }}</th></tr></thead>
+        <tbody><tr><th>True {{ cat_names[0] }}</th><td><a href="{{ url_for('matrix_tweets', matrix_id=matrix.id) }}?cm=TP">{{ matrix_classes['TP'] }}</a></td></td><td><a href="{{ url_for('matrix_tweets', matrix_id=matrix.id) }}?cm=FN">{{ matrix_classes['FN'] }}</a></td></tbody></tr>
+        <tbody><tr><th>True {{ cat_names[1] }}</th></td><td><a href="{{ url_for('matrix_tweets', matrix_id=matrix.id) }}?cm=FP">{{ matrix_classes['FP'] }}</a></td><td><a href="{{ url_for('matrix_tweets', matrix_id=matrix.id) }}?cm=TN">{{ matrix_classes['TN'] }}</a></td></tbody></tr>
+        
+    </table>
+    
+        <ul>
+        <p>Current certainty threshold: {{ matrix.threshold }}</p>
+        <p>Accuracy: {{ accuracy }} </p>
+        <p>Tweets in matrix: <a href="{{ url_for('included_tweets', matrix_id=matrix.id) }}">{{ len_data[0] }}</a>  / {{ (len_data[2]) }}</p>
+        <p>Excluded tweets: <a href="{{ url_for('excluded_tweets', matrix_id=matrix.id) }}">{{ len_data[1] }} </a>  / {{ (len_data[2]) }} </p>
+        </ul>
+    
 
+    <div class="content-section">
+    <h3> Modify parameters </h3>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <div class="form-group">
+                {{ form.threshold.label(class="form-control-label")}}<br>
+                {{ form.threshold(class="form-control form-control-lg")}}
+                {% for error in form.threshold.errors %}
+                    <span style="color :red;">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                {{ form.ratio.label(class="form-control-label")}}<br>
+                {% if form.ratio.errors %}
+                {{ form.ratio(class="form-control form-control-lg is-invalid") }}
+                <div class="invalid-feedback">
+                    {% for error in form.ratio.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% else %}
+                {{ form.ratio(class="form-control form-control-lg") }}
+            {% endif %}
+            </div>
+            <div class="form-check">
+                {{ form.shuffle(class="form-check-input") }}
+                {{ form.shuffle.label(class="form-check-label") }}
+            </div>
+        </fieldset>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-outline-info") }}
+        </div>
+    </form>
+</div>
+        
 {% endblock content %}  
+

@@ -1,6 +1,6 @@
 from datetime import datetime
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-from nlp4all import db, login_manager, app
+from nlp4all import db, login_manager, app, utils
 from flask_login import UserMixin
 from sqlalchemy.types import JSON
 import collections
@@ -316,17 +316,17 @@ class UserRoles(db.Model):
 
 # Define the Matrix-Categories association table
 class MatrixCategories(db.Model):
-    __tablename__ = 'matrix_categories'
+    __tablename__ = 'confusionmatrix_categories'
     id = db.Column(db.Integer(), primary_key=True)
-    matrix_id = db.Column(db.Integer(), db.ForeignKey('matrix.id', ondelete='CASCADE'))
+    matrix_id = db.Column(db.Integer(), db.ForeignKey('confusion_matrix.id', ondelete='CASCADE'))
     category_id = db.Column(db.Integer(), db.ForeignKey('tweet_tag_category.id', ondelete='CASCADE'))
 
 # Define the Tweet-Matrix association table
 class TweetMatrix(db.Model):
-    __tablename__ = 'tweet_matrix'
+    __tablename__ = 'tweet_confusionmatrix'
     id = db.Column(db.Integer(), primary_key=True)
     tweet = db.Column(db.Integer(), db.ForeignKey('tweet.id', ondelete='CASCADE'))
-    matrix = db.Column(db.Integer(), db.ForeignKey('matrix.id', ondelete='CASCADE'))
+    matrix = db.Column(db.Integer(), db.ForeignKey('confusion_matrix.id', ondelete='CASCADE'))
 
 # class Post(db.Model):
 #     id = db.Column(db.Integer, primary_key=True)
@@ -442,29 +442,57 @@ class BayesianAnalysis(db.Model):
         return (preds, {k : round(sum(v.values()) / len(set(words)),2) for k, v in predictions.items()})
 
 class ConfusionMatrix(db.Model):
-    # TODO: independent of analysis ==> access all tweets (?)
+   
     id = db.Column(db.Integer, primary_key=True)
-    categories = db.Column(db.Integer)
-    #categories = db.relationship('TweetTagCategory', secondary='matrix_categories')
-    #tweets = db.relationship('Tweet', secondary='tweet_matrix') # add these later?
-    #analysis = db.Column(db.Integer, db.ForeignKey('bayesian_analysis.id', ondelete="CASCADE")) # bayesian_ modified in analysis
-    tweets = db.Column(JSON, default=[])
+    categories = db.relationship('TweetTagCategory', secondary='confusionmatrix_categories')
+    tweets = db.relationship('Tweet', secondary='tweet_confusionmatrix') # add these later?
     matrix_data = db.Column(JSON) # here to save the TP/TN/FP/FN (+ probability?)
+    train_data = db.Column(JSON)
     tf_idf = db.Column(JSON)
     training_and_test_sets = db.Column(JSON)
+    threshold = db.Column(db.Float())
 
-
-    def get_project(self):
-        return Project.query.get(self.project)
-
-    def update_trainset(self, tweet, category):
-        self.trainset['counts'] = self.trainset['counts'] + 1
-        if category.name not in self.trainset.keys():
-            self.trainset[category.name] = {'counts' : 0, 'words' : {}}
-        self.trainset[category.name]['counts'] = (self.trainset[category.name].get('counts', 0)) + 1
+    def updated_data(self, tweet, category):
+        self.train_data['counts'] = self.train_data['counts'] + 1
+        
+        if category.name not in self.train_data.keys():
+            self.train_data[category.name] = {'counts' : 0, 'words' : {}}
+        self.train_data[category.name]['counts'] = (self.train_data[category.name].get('counts', 0)) + 1
         for w in set(tweet.words):
-            val = self.trainset[category.name]['words'].get(w, 0)
-            self.trainset[category.name]['words'][w] = val + 1
-        return self.trainset
+            val = self.train_data[category.name]['words'].get(w, 0)
+            self.train_data[category.name]['words'][w] = val + 1
+        return self.train_data
+
+    def update_tnt_set(self, ratio):
+        tweet_id_and_cat = { t.id : t.category for t in self.tweets}
+        self.training_and_test_sets = utils.create_n_split_tnt_sets(30, ratio, tweet_id_and_cat)
+        return self.training_and_test_sets
+
+    def get_predictions_and_words(self, words):
+        
+        categories = self.categories
+        category_names = [c.name for c in categories]
+        preds = {}
+        predictions = {}
+        if self.train_data['counts'] == 0:
+            predictions = {c : {w : 0} for w in words for c in category_names}
+            # predictions = {word : {category : 0 for category in category_names} for word in words}
+        else:
+            for w in words: # only categorize each word once
+                preds[w] = {c : 0 for c in category_names}
+                for cat in category_names:
+                    predictions[cat] = predictions.get(cat, {})
+                    prob_ba = self.train_data[cat]['words'].get(w, 0) / self.train_data[cat]['counts']
+                    prob_a = self.train_data[cat]['counts'] / self.train_data['counts'] 
+                    prob_b = sum([self.train_data[c]['words'].get(w, 0) for c in category_names]) / self.train_data['counts']
+                    if  prob_b == 0:
+                        preds[w][cat] = 0
+                        predictions[cat][w] = 0
+                    else:
+                        preds[w][cat] = round(prob_ba * prob_a / prob_b, 2)
+                        predictions[cat][w] = round(prob_ba * prob_a / prob_b, 2)
+
+        return (preds, {k : round(sum(v.values()) / len(set(words)),2) for k, v in predictions.items()})
+
     
 

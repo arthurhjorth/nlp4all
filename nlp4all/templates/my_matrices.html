@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Understand your classification performance!</h2>
+    </br>
+    <p>A confusion matrix is a way of analyzing your classification performance.</p>
+    <p>Below you see a list of your matrices. How are different parties affecting the results?</p>
+    </br>
+  <h2>My Matrices</h2>
+<div class="content-section">
+    {% for p in matrices %}
+    <a class="nav-item nav-link" href="{{ url_for('matrix', matrix_id=p.id) }}">Matrix {{ p.id }}</a>
+    <ul><p>categories : 
+    {{ p.categories[0].name }} and {{ p.categories[1].name }}
+    </p>
+    </ul>
+    {% endfor %}
+</div>
+
+
+    {% include "create_matrix.html" %}
+
+{% endblock content %}

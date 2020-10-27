@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<div>
+    <p>Back to the <a href="{{ url_for('matrix', matrix_id=matrix.id) }}">confusion matrix</a></p>
+</div>
+
+<div class="content-section">
+
+    {% set table_data = cm_info %}
+    {% set table_name = "table_name" %}
+    {% include "data_table.html" %}
+
+</div>
+
+
+
+{% endblock content %}
