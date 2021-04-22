@@ -5,8 +5,12 @@ from random import sample, shuffle
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request, abort, jsonify
 from nlp4all import app, db, bcrypt, mail
-from nlp4all.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, RequestResetForm, ResetPasswordForm, AddOrgForm, AddBayesianAnalysisForm, AddProjectForm, TaggingForm, AddTweetCategoryForm, AddTweetCategoryForm, AddBayesianRobotForm, TagButton, AddBayesianRobotFeatureForm, BayesianRobotForms, CreateMatrixForm, ThresholdForm, AnnotationForm
-from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag, BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel
+from nlp4all.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, RequestResetForm, ResetPasswordForm,\
+    AddOrgForm, AddBayesianAnalysisForm, AddProjectForm, TaggingForm, AddTweetCategoryForm, AddTweetCategoryForm,\
+    AddBayesianRobotForm, TagButton, AddBayesianRobotFeatureForm, BayesianRobotForms, CreateMatrixForm, ThresholdForm,\
+    AnnotationForm, AddWordEmbeddingForm
+from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag,\
+    BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_mail import Message
 import datetime
@@ -16,6 +20,8 @@ from nlp4all.utils import get_user_projects, get_user_project_analyses, reduce_w
 import operator
 import re
 from gensim.utils import simple_preprocess
+from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+
 
 @app.route("/")
 @app.route("/home")
@@ -55,12 +61,76 @@ def add_project():
         return(redirect(url_for('home', project=project_id)))
     return render_template('add_project.html', title='Add New Project', form=form)
 
+
 @app.route("/project2", methods=['GET', "POST"])
 def project2():
     project_id = request.args.get('project', None, type=int)
+    print(project_id)
     project = Project.query.get(project_id)
-    analyses = []
-    return render_template('project2.html', title='About', project=project, analyses=analyses)
+    analyses = project.analyses if (project and project.analyses) else []
+    bayesian_form = AddBayesianAnalysisForm()
+    embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
+    embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]
+
+    if bayesian_form.validate_on_submit():  # activates when not wanted
+        print(bayesian_form.validate_on_submit())
+        print(embedding_form.validate_on_submit())
+        userid = current_user.id
+        name = bayesian_form.name.data
+        number_per_category = bayesian_form.number.data
+        analysis_tweets = []
+        if bayesian_form.shared.data:
+            tweets_by_cat = {cat : [t.id for t in project.tweets if t.category == cat.id] for cat in project.categories}
+            for cat, tweets in tweets_by_cat.items():
+                analysis_tweets.extend(sample(tweets, number_per_category))
+        # make sure all students see tweets in the same order. So shuffle them now, and then
+        # put them in the database
+        shuffle(analysis_tweets)
+        analysis = BayesianAnalysis(user = userid, name=name, project=project.id, data = {"counts" : 0, "words" : {}},
+                                    shared=bayesian_form.shared.data, tweets=analysis_tweets, annotation_tags={},
+                                    annotate=bayesian_form.annotate.data )
+        db.session.add(analysis)
+        db.session.commit()
+        return(redirect(url_for('project2', project=project_id)))
+
+    if embedding_form.validate_on_submit():
+        print(bayesian_form.validate_on_submit())
+        print(embedding_form.validate_on_submit())
+        #userid = current_user.id  # useful?
+        name = embedding_form.name.data
+        vector_size = embedding_form.vector_size.data
+        epochs = embedding_form.epochs.data
+        training_cats = embedding_form.training_set.data
+        print(training_cats)
+        tweets = Tweet.query.filter(Tweet.category.in_(training_cats)).all()
+        print(len(tweets))
+        if embedding_form.d2v.data:  # d2v model
+            # should be done in the background
+            training_set = [TaggedDocument(simple_preprocess(tweet.text), [tweet.id]) for tweet in tweets]
+            gensim_d2v = Doc2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
+            gensim_d2v.build_vocab(training_set)
+            print("training the d2v model")
+            gensim_d2v.train(training_set, total_examples=gensim_d2v.corpus_count, epochs=gensim_d2v.epochs)
+            print("done")
+            # save the model to the db
+            print(D2VModel.query.all())
+            new_id = max([model.id for model in D2VModel.query.all()]) + 1
+            d2v = D2VModel(id=new_id, description=name)
+            d2v.save(gensim_d2v)
+            db.session.add(d2v)
+            db.session.commit()
+            flash("The model has been trained and saved to the database")
+            # Redirect to the project page
+            return redirect(url_for('project2', project=project_id))
+        else:  # w2v only model
+            training_set = [simple_preprocess(tweet.text) for tweet in tweets]
+            #gensim_w2v = Word2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
+            #
+        #return(redirect(url_for('project2', project=project_id)))
+
+    return render_template('project2.html', title='About', project=project, analyses=analyses,
+                           bayesian_form=bayesian_form, embedding_form=embedding_form)
+
 
 @app.route("/project", methods=['GET', "POST"])
 def project():
@@ -99,7 +169,8 @@ def add_numbers():
     a = request.args.get('a', 0, type=int)
     b = request.args.get('b', 0, type=int)
     return jsonify(result=a + b)
-    
+
+
 @app.route("/ajax")
 def ajax():
     a = request.args.get('a', 0, type=int)

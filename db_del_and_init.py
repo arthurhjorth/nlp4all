@@ -137,7 +137,8 @@ training_and_test_sets = create_n_train_and_test_sets(30, tweet_id_and_cat)
 
 #project = Project(name="DF og Ehl", organization=org.id, categories=cats)
 #project= add_project(name="DF og ehl", description="", org=org, cat_ids=cats)
-project = Project(name = 'name', description = 'description', organization = org.id, categories = cats_objs, tweets = tweet_objs, tf_idf = tf_idf, training_and_test_sets = training_and_test_sets)
+project = Project(name = 'test project', description = 'Just a test project', organization = org.id, categories = cats_objs,
+                  tweets = tweet_objs, tf_idf = tf_idf, training_and_test_sets = training_and_test_sets)
 db.session.add(project)
 
 
@@ -208,13 +209,14 @@ db.session.commit()
 ## tests
 
 d2vs = D2VModel.query.all()
-print(len(d2vs))
+print("nb of models", len(d2vs))
 
 new_d2v = d2vs[0]
 gensim_d2v = new_d2v.load()  # loaded model. d2v_model is the initial one
 
 # compare some stuff
 # vocab length
+print("vocab lengths")
 print(len(d2v_model.wv.index_to_key))
 print(len(gensim_d2v.wv.index_to_key))
 

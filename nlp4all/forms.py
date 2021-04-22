@@ -158,7 +158,16 @@ class AnnotationForm(FlaskForm):
     hidden = HiddenField()
     submit = SubmitField('save text')
 
+
 class SelectCategoryForm(FlaskForm):
     category = IntegerField('cat_id')
     submit = SubmitField('select category')
 
+
+class AddWordEmbeddingForm(FlaskForm):
+    name = StringField('Title of Analysis', validators=[DataRequired()])
+    d2v = BooleanField('Doc2Vec model')  # create a Doc2Vec or a Word2Vec
+    vector_size = IntegerField('Embedded vector size')
+    epochs = IntegerField('Epochs')
+    training_set = SelectMultipleField("Data to train on", validators=[DataRequired()])
+    submit = SubmitField('Create W2V Analysis')

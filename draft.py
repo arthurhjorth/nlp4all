@@ -183,12 +183,12 @@ danish_model = D2VModel.query.filter_by(id=2).first().load(verbose=1)
 full_model = D2VModel.query.filter_by(id=1).first().load()
 
 
-## testing data -> clustering with PCA and t-SNE
+""""## testing data -> clustering with PCA and t-SNE
 test_cats = [1,2,3,4,5,8,9,10,11]  # the categories used in the test set
 
 # on danish_model
 display_from_cats(danish_model, test_cats)
-display_from_cats(danish_model, [2,8])
+display_from_cats(danish_model, [2,8])"""
 
 
 # on full_model
@@ -281,3 +281,29 @@ proj = models.Project.query.first()
 print(proj.tf_idf)
 analysis = models.BayesianAnalysis.query.first()
 print(analysis.data)"""
+
+
+### tests on pca
+
+cats = [1,2,3]
+pca = PCA(n_components=3)
+
+docvecs = []
+
+for cat_id in cats:
+    tweets = Tweet.query.filter_by(category=cat_id).all()
+    dv = [danish_model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
+    pca.fit(dv)
+    docvecs.append(dv)
+
+data_x = []
+data_y = []
+data_z = []
+for dv in docvecs:
+    vecs = pca.transform(dv)
+    data_x.append(list(vecs[:,0]))
+    data_y.append(list(vecs[:,1]))
+    data_z.append(list(vecs[:,2]))
+
+print(len(data_x))
+print(len(data_x[0]))
