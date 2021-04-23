@@ -70,7 +70,7 @@ class AddBayesianAnalysisForm(FlaskForm):
     shared = BooleanField('Shared project?')
     annotate = BooleanField('Annotate')
     number = IntegerField("How many of each category?")
-    submit = SubmitField('Create Analysis')
+    submit_bay = SubmitField('Create Analysis')
 
 class RunBayesianAnalysisRobot(FlaskForm):
     run_analysis = SubmitField('Kør analysen!')
@@ -170,4 +170,4 @@ class AddWordEmbeddingForm(FlaskForm):
     vector_size = IntegerField('Embedded vector size')
     epochs = IntegerField('Epochs')
     training_set = SelectMultipleField("Data to train on", validators=[DataRequired()])
-    submit = SubmitField('Create W2V Analysis')
+    submit_emb = SubmitField('Create W2V Analysis')
