@@ -28,7 +28,7 @@ from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 @app.route("/home/", methods=['GET', 'POST'])
 @login_required
 def home():
-    my_projects = get_user_projects(current_user) 
+    my_projects = get_user_projects(current_user)
     return render_template('home.html', projects=my_projects)
 
 @app.route("/robot_summary", methods=['GET', 'POST'])
@@ -65,17 +65,14 @@ def add_project():
 @app.route("/project2", methods=['GET', "POST"])
 def project2():
     project_id = request.args.get('project', None, type=int)
-    print(project_id)
     project = Project.query.get(project_id)
     analyses = project.analyses if (project and project.analyses) else []
     bayesian_form = AddBayesianAnalysisForm()
     embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
     embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]
 
-    if bayesian_form.validate_on_submit():  # activates when not wanted
-        print(bayesian_form.validate_on_submit())
-        print(embedding_form.validate_on_submit())
-        userid = current_user.id
+    if bayesian_form.submit_bay.data and bayesian_form.validate_on_submit():
+        userid = current_user.id  # useful?
         name = bayesian_form.name.data
         number_per_category = bayesian_form.number.data
         analysis_tweets = []
@@ -86,24 +83,20 @@ def project2():
         # make sure all students see tweets in the same order. So shuffle them now, and then
         # put them in the database
         shuffle(analysis_tweets)
-        analysis = BayesianAnalysis(user = userid, name=name, project=project.id, data = {"counts" : 0, "words" : {}},
+        analysis = BayesianAnalysis(user=userid, name=name, project=project.id, data={"counts": 0, "words": {}},
                                     shared=bayesian_form.shared.data, tweets=analysis_tweets, annotation_tags={},
                                     annotate=bayesian_form.annotate.data )
         db.session.add(analysis)
         db.session.commit()
         return(redirect(url_for('project2', project=project_id)))
 
-    if embedding_form.validate_on_submit():
-        print(bayesian_form.validate_on_submit())
-        print(embedding_form.validate_on_submit())
+    if embedding_form.submit_emb and embedding_form.validate_on_submit():
         #userid = current_user.id  # useful?
         name = embedding_form.name.data
         vector_size = embedding_form.vector_size.data
         epochs = embedding_form.epochs.data
         training_cats = embedding_form.training_set.data
-        print(training_cats)
         tweets = Tweet.query.filter(Tweet.category.in_(training_cats)).all()
-        print(len(tweets))
         if embedding_form.d2v.data:  # d2v model
             # should be done in the background
             training_set = [TaggedDocument(simple_preprocess(tweet.text), [tweet.id]) for tweet in tweets]
@@ -113,7 +106,6 @@ def project2():
             gensim_d2v.train(training_set, total_examples=gensim_d2v.corpus_count, epochs=gensim_d2v.epochs)
             print("done")
             # save the model to the db
-            print(D2VModel.query.all())
             new_id = max([model.id for model in D2VModel.query.all()]) + 1
             d2v = D2VModel(id=new_id, description=name)
             d2v.save(gensim_d2v)
