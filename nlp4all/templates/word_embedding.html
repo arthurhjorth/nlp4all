@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="content-section">
+        <form method="POST" action="">
+            {{ display_form.hidden_tag() }}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Display the embedded vectors</legend>
+                <div class="form-group">
+                    {{ display_form.displayed_set.label(class="form-control-label") }}
+
+                    {% if display_form.displayed_set.errors %}
+                        {{ display_form.displayed_set(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in display_form.displayed_set.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ display_form.displayed_set(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ display_form.method.label(class="form-control-label") }}
+                    {% if display_form.method.errors %}
+                        {{ display_form.method(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in display_form.method.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ display_form.method(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ display_form.dimension.label(class="form-check-label") }}
+                    {{ display_form.dimension(class="form-check-input") }}
+                </div>
+            <div class="form-group">
+                {{ display_form.submit_display(class="btn btn-outline-info") }}
+            </div>
+            </fieldset>
+        </form>
+    </div>
+{% endblock content %}

@@ -5,10 +5,7 @@ from random import sample, shuffle
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request, abort, jsonify
 from nlp4all import app, db, bcrypt, mail
-from nlp4all.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm, RequestResetForm, ResetPasswordForm,\
-    AddOrgForm, AddBayesianAnalysisForm, AddProjectForm, TaggingForm, AddTweetCategoryForm, AddTweetCategoryForm,\
-    AddBayesianRobotForm, TagButton, AddBayesianRobotFeatureForm, BayesianRobotForms, CreateMatrixForm, ThresholdForm,\
-    AnnotationForm, AddWordEmbeddingForm
+from nlp4all.forms import *
 from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag,\
     BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel
 from flask_login import login_user, current_user, logout_user, login_required
@@ -19,6 +16,8 @@ from sqlalchemy.orm.attributes import flag_modified
 from nlp4all.utils import get_user_projects, get_user_project_analyses, reduce_with_PCA
 import operator
 import re
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 from gensim.utils import simple_preprocess
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 
@@ -63,6 +62,7 @@ def add_project():
 
 
 @app.route("/project2", methods=['GET', "POST"])
+@login_required
 def project2():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
@@ -1362,7 +1362,7 @@ def plotly_scatter_plot():
     data_y = []
     labels = [TweetTagCategory.query.filter_by(id=cats[i]).first().name for i in range(len(cats))]
     docvecs = []
-    pca = PCA(n_components=3)
+    pca = PCA(n_components=2)
     for cat_id in cats:
         tweets = Tweet.query.filter_by(category=cat_id).all()
         dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
@@ -1399,7 +1399,57 @@ def scatter_plot_3D():
     return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
                            labels=json.dumps(labels))
 
-from sklearn.decomposition import PCA
+
+@app.route("/word_embedding", methods=['GET', 'POST'])
+@login_required
+def word_embedding():
+    # form to display what you want
+    model_id = request.args.get('model', None, type=int)
+    model = D2VModel.query.filter_by(id=model_id).first().load()
+    display_form = DisplayWordEmbeddingForm()
+    display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]  # should be changed to contain only the project's cats
+    display_form.method.choices = [('1', 'PCA'), ('2', 't-SNE')]
+
+    if display_form.validate_on_submit():
+        displayed_cats = display_form.displayed_set.data
+        data_x = []
+        data_y = []
+        n_components = 2
+        labels = [TweetTagCategory.query.filter_by(id=displayed_cats[i]).first().name for i in range(len(displayed_cats))]
+        docvecs = []
+        if display_form.dimension.data:  # if 3D
+            n_components = 3
+            data_z = []
+        # choosing the reduction model
+        # the model should have a fit and a transform method + n_components argument
+        if display_form.method.data == '1':
+            reduction_model = PCA(n_components=n_components)
+        elif display_form.method.data == '2':
+            # t-SNE doesn't have a transform method
+            reduction_model = TSNE(n_components=n_components)
+            flash('t-SNE not implemented yet')
+            return render_template("word_embedding.html", title='Display vectors', display_form=display_form)
+        for cat_id in displayed_cats:
+            tweets = Tweet.query.filter_by(category=cat_id).all()
+            dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
+            reduction_model.fit(dv)
+            docvecs.append(dv)
+        # transforming vectors
+        for dv in docvecs:
+            vecs = reduction_model.transform(dv)
+            data_x.append(list(vecs[:,0]))
+            data_y.append(list(vecs[:,1]))
+            if n_components == 3:
+                data_z.append(list(vecs[:,2]))
+        if n_components == 3:
+            return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
+                           labels=json.dumps(labels))
+        return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
+
+    return render_template("word_embedding.html", title='Display vectors', display_form=display_form)
+    # display issue on the 3D tag
+
+
 @app.route('/html_de_ses_morts', methods=['GET'])
 def test_html():
     model = D2VModel.query.filter_by(id=2).first().load()
@@ -1417,5 +1467,3 @@ def test_html():
         dict_dv[key] = pca.transform(dict_dv[key])
     print(dict_dv)
     return render_template('html_de_ses_morts.html', **dict_dv)
-# not possible to feed a list of strings
-# I want to die

@@ -1,7 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from flask_login import current_user
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, TextAreaField, SelectMultipleField, SelectField, RadioField, FormField, FloatField, HiddenField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, TextAreaField,\
+    SelectMultipleField, SelectField, RadioField, FormField, FloatField, HiddenField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from nlp4all.models import User, Project 
 from wtforms.fields.core import Label
@@ -171,3 +172,10 @@ class AddWordEmbeddingForm(FlaskForm):
     epochs = IntegerField('Epochs')
     training_set = SelectMultipleField("Data to train on", validators=[DataRequired()])
     submit_emb = SubmitField('Create W2V Analysis')
+
+
+class DisplayWordEmbeddingForm(FlaskForm):
+    displayed_set = SelectMultipleField("Tweets to display", validators=[DataRequired()])
+    method = SelectField("Choose the reduction method", validators=[DataRequired()])
+    dimension = BooleanField("3D")
+    submit_display = SubmitField("Display")
