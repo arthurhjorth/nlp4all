@@ -29,6 +29,8 @@
     </form>
 </div>
 <div class="content-section" id="shared_corpus_bay">
+<<<<<<< HEAD
+=======
     <form method="POST" action="">
     {{ bayesian_form.hidden_tag() }}
         <fieldset class="form-group">
@@ -69,6 +71,7 @@
     </form>
 </div>
 <div class="content-section" id="random_corpus_bay">
+>>>>>>> 60fc2f75762aa3333b4b4d83e18a8a43645f62cf
     <form method="POST" action="">
     {{ bayesian_form.hidden_tag() }}
         <fieldset class="form-group">
@@ -108,6 +111,49 @@
         </div>
     </form>
 </div>
+<<<<<<< HEAD
+<div class="content-section" id="random_corpus_bay">
+    <form method="POST" action="">
+    {{ bayesian_form.hidden_tag() }}
+        <fieldset class="form-group">
+            <div class="form-group">
+                {{ bayesian_form.name.label(class="form-control-label") }}
+                {% if bayesian_form.name.errors %}
+                    {{ bayesian_form.name(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in bayesian_form.name.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ bayesian_form.name(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+                <div class="form-check">
+                    {{ bayesian_form.annotate(class="form-check-input") }}
+                    {{ bayesian_form.annotate.label(class="form-check-label") }}
+                </div>
+            <div class="form-group">
+                {{ bayesian_form.number.label(class="form-control-label") }}
+                {% if bayesian_form.number.errors %}
+                    {{ bayesian_form.number(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in bayesian_form.number.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ bayesian_form.number(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+        </fieldset>
+        <div class="form-group">
+            {{ bayesian_form.submit_bay(class="btn btn-outline-info") }}
+        </div>
+    </form>
+</div>
+=======
+>>>>>>> 60fc2f75762aa3333b4b4d83e18a8a43645f62cf
 <div class="content-section" id="word_embedding">
     <form method="POST" action="">
     {{ embedding_form.hidden_tag() }}
