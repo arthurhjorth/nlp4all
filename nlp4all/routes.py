@@ -13,7 +13,8 @@ from flask_mail import Message
 import datetime
 import json, ast
 from sqlalchemy.orm.attributes import flag_modified
-from nlp4all.utils import get_user_projects, get_user_project_analyses, reduce_with_PCA
+from nlp4all.utils import get_user_projects, get_user_project_analyses, reduce_with_PCA, reduce_with_TSNE,\
+    separate_by_cat
 import operator
 import re
 from sklearn.decomposition import PCA
@@ -1361,9 +1362,15 @@ def plotly_scatter_plot():
     data_x = []
     data_y = []
     labels = [TweetTagCategory.query.filter_by(id=cats[i]).first().name for i in range(len(cats))]
-    docvecs = []
-    pca = PCA(n_components=2)
-    for cat_id in cats:
+    tsne = TSNE(n_components=2)
+    tweets = Tweet.query.filter(Tweet.category.in_(cats)).all()
+    dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
+    reduced_dv = tsne.fit_transform(dv)
+    separated_docvecs = separate_by_cat(reduced_dv, cats)
+    for cat_vecs in separated_docvecs:
+        data_x.append(list(cat_vecs[:,0]))
+        data_y.append(list(cat_vecs[:,1]))
+    """for cat_id in cats:
         tweets = Tweet.query.filter_by(category=cat_id).all()
         dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
         pca.fit(dv)  # calculates the parameters of the PCA
@@ -1371,7 +1378,7 @@ def plotly_scatter_plot():
     for dv in docvecs:
         vecs = pca.transform(dv)  # actually transform the vectors
         data_x.append(list(vecs[:,0]))
-        data_y.append(list(vecs[:,1]))
+        data_y.append(list(vecs[:,1]))"""
     print(labels)
     return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
 
@@ -1388,12 +1395,12 @@ def scatter_plot_3D():
     pca = PCA(n_components=3)
     for cat_id in cats:
         tweets = Tweet.query.filter_by(category=cat_id).all()
-        dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
+        dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]  # doc vecs of 1 cat
         pca.fit(dv)
         docvecs.append(dv)
     for dv in docvecs:
         vecs = pca.transform(dv)
-        data_x.append(list(vecs[:,0]))
+        data_x.append(list(vecs[:,0]))  # size = (n_cats, n_doc_per_cat)
         data_y.append(list(vecs[:,1]))
         data_z.append(list(vecs[:,2]))
     return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
@@ -1421,26 +1428,21 @@ def word_embedding():
             n_components = 3
             data_z = []
         # choosing the reduction model
-        # the model should have a fit and a transform method + n_components argument
+        # the model should have a 'reduce_with' method and n_components argument
         if display_form.method.data == '1':
-            reduction_model = PCA(n_components=n_components)
+            reduction_function = reduce_with_PCA
         elif display_form.method.data == '2':
-            # t-SNE doesn't have a transform method
-            reduction_model = TSNE(n_components=n_components)
-            flash('t-SNE not implemented yet')
-            return render_template("word_embedding.html", title='Display vectors', display_form=display_form)
-        for cat_id in displayed_cats:
-            tweets = Tweet.query.filter_by(category=cat_id).all()
-            dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
-            reduction_model.fit(dv)
-            docvecs.append(dv)
+            reduction_function = reduce_with_TSNE
+        tweets = Tweet.query.filter(Tweet.category.in_(displayed_cats)).all()
+        dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
+        reduced_dv = reduction_function(dv, n_components=n_components)
+        separated_docvecs = separate_by_cat(reduced_dv, displayed_cats)
+        for cat_vecs in separated_docvecs:
+            data_x.append(list(cat_vecs[:,0]))
+            data_y.append(list(cat_vecs[:,1]))
         # transforming vectors
-        for dv in docvecs:
-            vecs = reduction_model.transform(dv)
-            data_x.append(list(vecs[:,0]))
-            data_y.append(list(vecs[:,1]))
             if n_components == 3:
-                data_z.append(list(vecs[:,2]))
+                data_z.append(list(cat_vecs[:,2]))
         if n_components == 3:
             return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
                            labels=json.dumps(labels))

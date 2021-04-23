@@ -388,3 +388,16 @@ def reduce_with_TSNE(data, n_components=2, perplexity=30, n_iter=1000):
     tsne = TSNE(n_components=n_components, perplexity=perplexity, n_iter=n_iter)
     tsne_reduced = tsne.fit_transform(data)
     return tsne_reduced
+
+
+def separate_by_cat(data, cats):
+    cat_lengths = []
+    separated_data = []
+    for cat in cats:
+        tweets = Tweet.query.filter_by(category=cat).all()
+        cat_lengths.append(len(tweets))
+    current_pos = 0
+    for cat_length in cat_lengths:
+        separated_data.append(data[current_pos:current_pos+cat_length])
+        current_pos = current_pos+cat_length
+    return separated_data
