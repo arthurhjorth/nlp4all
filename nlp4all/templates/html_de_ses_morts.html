@@ -3,19 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-    <h1>On met des trucs</h1>
-    <h1 id="1"></h1>
-    <h1>Pour voir si ca marche</h1>
-    <script>
-        let truc = {{ truc }};
-        TESTER = document.getElementById('1');
-        var liste = [];
-        for (i = 0; i < 3; i++) {
-            liste += truc[i];
+<div id="graph_plotly" style="width:600px;height:500px;"></div>
+<script>
+	TESTER = document.getElementById('graph_plotly');
+	var data = [];
+    var dict_dv = dict_dv;
+    var dict = {1: -1, 2: -2, 3: -3};
+    for (var key in dict_dv) {
+        var data_x = [1,2,3,4,5];
+        var data_y = [1,2,3,4,5];
+        var trace = {
+          x: data_x,
+          y: data_y,
+          mode: 'markers',
+          type: 'scatter',
+          name: 'truc',
+          marker: {
+                size: 12,
+                line: {
+                color: 'rgba(217, 217, 217, 0.14)',
+                width: 0.5},
+                opacity: 0.4}
         };
-        TESTER.innerHTML = liste;
-    </script>
+        data.push(trace);
+    }
+
+	var layout = {
+	  title:'Data Labels Hover'
+	};
+
+	Plotly.newPlot( TESTER, data, layout);
+</script>
 </body>
 </html>
+
