@@ -1422,13 +1422,12 @@ def word_embedding():
         data_x = []
         data_y = []
         n_components = 2
-        labels = [TweetTagCategory.query.filter_by(id=displayed_cats[i]).first().name for i in range(len(displayed_cats))]
-        docvecs = []
+        labels = [TweetTagCategory.query.filter_by(id=cat).first().name for cat in displayed_cats]
         if display_form.dimension.data:  # if 3D
             n_components = 3
             data_z = []
-        # choosing the reduction model
-        # the model should have a 'reduce_with' method and n_components argument
+        # choosing the reduction method
+        # the model should have a 'reduce_with' method
         if display_form.method.data == '1':
             reduction_function = reduce_with_PCA
         elif display_form.method.data == '2':

@@ -152,6 +152,7 @@ class ResetPasswordForm(FlaskForm):
                                      validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Reset Password')
 
+
 class AnnotationForm(FlaskForm):
     text = TextAreaField('selectedtext', validators=[DataRequired()])
     start = IntegerField('start')

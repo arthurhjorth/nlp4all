@@ -345,7 +345,7 @@ def get_tags(analysis, words, a_tweet): #set of tweet words
                                 mydict[w][a.annotation_tag] += 1
         return mydict
 
-         
+
 
 # assign cell colors (red/green) for matrices
 def matrix_css_info(index_list):
@@ -380,7 +380,6 @@ def reduce_with_PCA(data, n_components=2, verbose=False):
     return pca_results
 
 
-# probably takes a few minutes -> do it in the background
 def reduce_with_TSNE(data, n_components=2, perplexity=30, n_iter=1000):
     # if too much dimensions, use PCA to reduce first
     if len(data[0]) > 50:
