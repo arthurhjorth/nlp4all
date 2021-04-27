@@ -14,7 +14,7 @@ import datetime
 import json, ast
 from sqlalchemy.orm.attributes import flag_modified
 from nlp4all.utils import get_user_projects, get_user_project_analyses, reduce_with_PCA, reduce_with_TSNE,\
-    separate_by_cat
+    separate_by_cat, reduce_dimension
 import operator
 import re
 from sklearn.decomposition import PCA
@@ -1419,30 +1419,20 @@ def word_embedding():
 
     if display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
-        data_x = []
-        data_y = []
         n_components = 2
         labels = [TweetTagCategory.query.filter_by(id=cat).first().name for cat in displayed_cats]
         if display_form.dimension.data:  # if 3D
             n_components = 3
-            data_z = []
         # choosing the reduction method
         # the model should have a 'reduce_with' method
         if display_form.method.data == '1':
-            reduction_function = reduce_with_PCA
+            reduction_function = 'reduce_with_PCA'
         elif display_form.method.data == '2':
-            reduction_function = reduce_with_TSNE
+            reduction_function = 'reduce_with_TSNE'
         tweets = Tweet.query.filter(Tweet.category.in_(displayed_cats)).all()
         dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
-        reduced_dv = reduction_function(dv, n_components=n_components)
-        separated_docvecs = separate_by_cat(reduced_dv, displayed_cats)
-        for cat_vecs in separated_docvecs:
-            data_x.append(list(cat_vecs[:,0]))
-            data_y.append(list(cat_vecs[:,1]))
-        # transforming vectors
-            if n_components == 3:
-                data_z.append(list(cat_vecs[:,2]))
-        if n_components == 3:
+        data_x, data_y, data_z, labels = reduce_dimension(dv, displayed_cats, reduction_function, n_components, labels)
+        if data_z != []:
             return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
                            labels=json.dumps(labels))
         return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
@@ -1451,20 +1441,22 @@ def word_embedding():
     # display issue on the 3D tag
 
 
+from nlp4all.utils import addition
+from nlp4all.forms import PipoForm
 @app.route('/html_de_ses_morts', methods=['GET'])
 def test_html():
-    model = D2VModel.query.filter_by(id=2).first().load()
-    cats = [1,2,3]
-    dict_dv = {}
-    list_dv = []
-    for cat_id in cats:
-        tweets = Tweet.query.filter_by(category=cat_id).all()
-        dv_i = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
-        dict_dv[TweetTagCategory.query.filter_by(id=cat_id).first().name] = dv_i
-        list_dv.extend(dv_i)
-    pca = PCA(n_components=2)
-    pca.fit(list_dv)
-    for key in dict_dv.keys():
-        dict_dv[key] = pca.transform(dict_dv[key])
-    print(dict_dv)
-    return render_template('html_de_ses_morts.html', **dict_dv)
+    a = 2
+    b = 4
+    add = addition.delay(a, b)
+    form = PipoForm()
+    return render_template('html_de_ses_morts.html', add=add, form=form)
+
+
+from time import sleep
+#background process happening without any refreshing
+@app.route('/background_process_test')
+def background_process_test():
+    a = 2
+    b = 4
+    sleep(2)
+    return str(a + b)

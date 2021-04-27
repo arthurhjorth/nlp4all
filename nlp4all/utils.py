@@ -10,6 +10,7 @@ import random, itertools
 from nlp4all.models import BayesianAnalysis, BayesianRobot
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from nlp4all import celery_app
 
 
 def generate_n_hsl_colors(no_colors, transparency=1, offset=0):
@@ -370,6 +371,7 @@ def matrix_css_info(index_list):
 
 ### Visualization functions
 
+@celery_app.task
 def reduce_with_PCA(data, n_components=2, verbose=False):
     # data should be a list of numpy arrays, or a pandas dataframe, or something similar
     # row = a tweet ; column = a dimension of the word space
@@ -380,6 +382,7 @@ def reduce_with_PCA(data, n_components=2, verbose=False):
     return pca_results
 
 
+@celery_app.task
 def reduce_with_TSNE(data, n_components=2, perplexity=30, n_iter=1000):
     # if too much dimensions, use PCA to reduce first
     if len(data[0]) > 50:
@@ -389,6 +392,7 @@ def reduce_with_TSNE(data, n_components=2, perplexity=30, n_iter=1000):
     return tsne_reduced
 
 
+@celery_app.task
 def separate_by_cat(data, cats):
     cat_lengths = []
     separated_data = []
@@ -400,3 +404,31 @@ def separate_by_cat(data, cats):
         separated_data.append(data[current_pos:current_pos+cat_length])
         current_pos = current_pos+cat_length
     return separated_data
+
+
+@celery_app.task
+def reduce_dimension(dv, cats, method, n_components, labels):
+    data_x = []
+    data_y = []
+    data_z = []  # always created, but actually used only in 3D
+    if method == 'reduce_with_PCA':
+        reduction_function = reduce_with_PCA
+    elif method == 'reduce_with_TSNE':
+        reduction_function = reduce_with_TSNE
+    reduced_dv = reduction_function(dv, n_components=n_components)
+    separated_docvecs = separate_by_cat(reduced_dv, cats)
+    for cat_vecs in separated_docvecs:
+        data_x.append(list(cat_vecs[:,0]))
+        data_y.append(list(cat_vecs[:,1]))
+        if n_components == 3:
+                data_z.append(list(cat_vecs[:,2]))
+    return data_x, data_y, data_z, labels
+
+
+
+
+from time import sleep
+@celery_app.task
+def addition(a, b):
+    sleep(5)
+    return a + b
