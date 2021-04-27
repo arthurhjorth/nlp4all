@@ -42,4 +42,14 @@
             </fieldset>
         </form>
     </div>
+    {% if show_form %}
+        <div class="content-section">
+            <form method="POST" action="">
+                {{ show_form.hidden_tag() }}
+                <div class="form-group">
+                    {{ show_form.show }}
+                </div>
+            </form>
+        </div>
+    {% endif %}
 {% endblock content %}

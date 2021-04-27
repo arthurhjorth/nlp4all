@@ -11,6 +11,7 @@ from nlp4all.models import BayesianAnalysis, BayesianRobot
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from nlp4all import celery_app
+import numpy as np
 
 
 def generate_n_hsl_colors(no_colors, transparency=1, offset=0):
@@ -402,7 +403,7 @@ def separate_by_cat(data, cats):
     current_pos = 0
     for cat_length in cat_lengths:
         separated_data.append(data[current_pos:current_pos+cat_length])
-        current_pos = current_pos+cat_length
+        current_pos = current_pos + cat_length
     return separated_data
 
 
@@ -418,10 +419,10 @@ def reduce_dimension(dv, cats, method, n_components, labels):
     reduced_dv = reduction_function(dv, n_components=n_components)
     separated_docvecs = separate_by_cat(reduced_dv, cats)
     for cat_vecs in separated_docvecs:
-        data_x.append(list(cat_vecs[:,0]))
-        data_y.append(list(cat_vecs[:,1]))
+        data_x.append(cat_vecs[:,0].tolist())
+        data_y.append(cat_vecs[:,1].tolist())
         if n_components == 3:
-                data_z.append(list(cat_vecs[:,2]))
+            data_z.append(cat_vecs[:,2].tolist())
     return data_x, data_y, data_z, labels
 
 

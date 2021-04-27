@@ -2,41 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>Mange tes morts, html</title>
 </head>
 <body>
-<div id="graph_plotly" style="width:600px;height:500px;"></div>
-<script>
-	TESTER = document.getElementById('graph_plotly');
-	var data = [];
-    var dict_dv = dict_dv;
-    var dict = {1: -1, 2: -2, 3: -3};
-    for (var key in dict_dv) {
-        var data_x = [1,2,3,4,5];
-        var data_y = [1,2,3,4,5];
-        var trace = {
-          x: data_x,
-          y: data_y,
-          mode: 'markers',
-          type: 'scatter',
-          name: 'truc',
-          marker: {
-                size: 12,
-                line: {
-                color: 'rgba(217, 217, 217, 0.14)',
-                width: 0.5},
-                opacity: 0.4}
-        };
-        data.push(trace);
-    }
-
-	var layout = {
-	  title:'Data Labels Hover'
-	};
-
-	Plotly.newPlot( TESTER, data, layout);
-</script>
+    <h1>Mange bien tes morts, Javascript. Personne ne t'aime.</h1>
+    <h2>On attend le résultat</h2>
+    <div class="form-group" id="button">
+        {{ form.show(class="form-group-input") }}
+    </div>
+    <div id="calculating">
+        <h4>Still processing</h4>
+    </div>
 </body>
+<script>
+    var button = document.getElementById("button");
+    var succes = document.getElementById("success");
+    var calculating = document.getElementById("calculating");
+    button.onclick = f1;
+    function f1() {
+        import { AsyncResult } from 'asyncresult-js';
+        let r1 = new AsyncResult(null, "foo"); // same as AsyncResult.success('foo')
+        alert(r1.isError()); // false
+        console.log(r1.val()); // 'foo'
+
+        let r2 = new AsyncResult("foo"); // same as AsyncResult.fail('foo')
+        console.log(r1.isError()); // true
+        console.log(r1.err()); // 'foo'
+    };
+</script>
 </html>
 

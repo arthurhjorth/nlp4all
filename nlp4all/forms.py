@@ -180,3 +180,7 @@ class DisplayWordEmbeddingForm(FlaskForm):
     method = SelectField("Choose the reduction method", validators=[DataRequired()])
     dimension = BooleanField("Plot in 3D")
     submit_display = SubmitField("Display")
+
+
+class ShowForm(FlaskForm):
+    show = SubmitField('Show')

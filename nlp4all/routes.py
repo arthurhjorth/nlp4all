@@ -4,7 +4,7 @@ import nlp4all.utils
 from random import sample, shuffle
 from PIL import Image
 from flask import render_template, url_for, flash, redirect, request, abort, jsonify
-from nlp4all import app, db, bcrypt, mail
+from nlp4all import app, db, bcrypt, mail, celery_app
 from nlp4all.forms import *
 from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag,\
     BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel
@@ -17,10 +17,12 @@ from nlp4all.utils import get_user_projects, get_user_project_analyses, reduce_w
     separate_by_cat, reduce_dimension
 import operator
 import re
+import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from gensim.utils import simple_preprocess
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+from celery.result import AsyncResult
 
 
 @app.route("/")
@@ -1370,15 +1372,6 @@ def plotly_scatter_plot():
     for cat_vecs in separated_docvecs:
         data_x.append(list(cat_vecs[:,0]))
         data_y.append(list(cat_vecs[:,1]))
-    """for cat_id in cats:
-        tweets = Tweet.query.filter_by(category=cat_id).all()
-        dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
-        pca.fit(dv)  # calculates the parameters of the PCA
-        docvecs.append(dv)
-    for dv in docvecs:
-        vecs = pca.transform(dv)  # actually transform the vectors
-        data_x.append(list(vecs[:,0]))
-        data_y.append(list(vecs[:,1]))"""
     print(labels)
     return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
 
@@ -1416,6 +1409,8 @@ def word_embedding():
     display_form = DisplayWordEmbeddingForm()
     display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]  # should be changed to contain only the project's cats
     display_form.method.choices = [('1', 'PCA'), ('2', 't-SNE')]
+    task_id = request.args.get('task', None, type=str)
+    show_form = ShowForm()
 
     if display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
@@ -1430,25 +1425,38 @@ def word_embedding():
         elif display_form.method.data == '2':
             reduction_function = 'reduce_with_TSNE'
         tweets = Tweet.query.filter(Tweet.category.in_(displayed_cats)).all()
-        dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
-        data_x, data_y, data_z, labels = reduce_dimension(dv, displayed_cats, reduction_function, n_components, labels)
-        if data_z != []:
-            return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
-                           labels=json.dumps(labels))
-        return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
+        dv = np.array([model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]).tolist()
+        reduced_dv = reduce_dimension.delay(dv, displayed_cats, reduction_function, n_components, labels)
+        flash("The dimension reduction is processing")
+        return redirect(url_for('word_embedding', model=model_id, task=reduced_dv.id))
+        #return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
+        #                       show_form=show_form)
 
-    return render_template("word_embedding.html", title='Display vectors', display_form=display_form)
-    # display issue on the 3D tag
+    if show_form.validate_on_submit():
+        reduced_dv = AsyncResult(task_id, app=celery_app)
+        if reduced_dv.state == 'PENDING':
+            flash("The process is not over yet :(")
+        elif reduced_dv.state == 'SUCCESS':
+            data_x, data_y, data_z, labels = reduced_dv.get()
+            if data_z != []:
+                return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
+                               labels=json.dumps(labels))
+            return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
+        else:
+            flash('Something went wrong somewhere... :(')
+
+    show_form_param = show_form if task_id else None
+    return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
+                           show_form=show_form_param)
 
 
 from nlp4all.utils import addition
-from nlp4all.forms import PipoForm
 @app.route('/html_de_ses_morts', methods=['GET'])
 def test_html():
     a = 2
     b = 4
     add = addition.delay(a, b)
-    form = PipoForm()
+    form = ShowForm()
     return render_template('html_de_ses_morts.html', add=add, form=form)
 
 
