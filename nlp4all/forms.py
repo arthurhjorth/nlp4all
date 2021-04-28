@@ -179,7 +179,7 @@ class DisplayWordEmbeddingForm(FlaskForm):
     displayed_set = SelectMultipleField("Tweets to display", validators=[DataRequired()])
     method = SelectField("Choose the reduction method", validators=[DataRequired()])
     dimension = BooleanField("Plot in 3D")
-    submit_display = SubmitField("Display")
+    submit_display = SubmitField("Compute")
 
 
 class ShowForm(FlaskForm):

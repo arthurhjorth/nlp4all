@@ -6,9 +6,9 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-<div id="graph_plotly" style="width:600px;height:500px;"></div>
+<div id="2D_graph" style="width:600px;height:500px;"></div>
 <script>
-	TESTER = document.getElementById('graph_plotly');
+	GRAPH = document.getElementById('2D_graph');
 	var data = []
     var data_x = {{ data_x }};
     var data_y = {{ data_y }};
@@ -34,7 +34,7 @@
 	  title:'Data Labels Hover'
 	};
 
-	Plotly.newPlot( TESTER, data, layout);
+	Plotly.newPlot(GRAPH, data, layout);
 </script>
 </body>
 </html>

@@ -13,11 +13,12 @@ from flask_mail import Message
 import datetime
 import json, ast
 from sqlalchemy.orm.attributes import flag_modified
-from nlp4all.utils import get_user_projects, get_user_project_analyses, reduce_with_PCA, reduce_with_TSNE,\
-    separate_by_cat, reduce_dimension
+from nlp4all.utils import get_user_projects, get_user_project_analyses
+from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat
 import operator
 import re
 import numpy as np
+import pickle
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from gensim.utils import simple_preprocess
@@ -105,20 +106,19 @@ def project2():
             training_set = [TaggedDocument(simple_preprocess(tweet.text), [tweet.id]) for tweet in tweets]
             gensim_d2v = Doc2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
             gensim_d2v.build_vocab(training_set)
-            print("training the d2v model")
-            gensim_d2v.train(training_set, total_examples=gensim_d2v.corpus_count, epochs=gensim_d2v.epochs)
-            print("done")
+            train_d2v(pickle.dumps(gensim_d2v), training_set)
             # save the model to the db
             new_id = max([model.id for model in D2VModel.query.all()]) + 1
             d2v = D2VModel(id=new_id, description=name)
             d2v.save(gensim_d2v)
             db.session.add(d2v)
             db.session.commit()
-            flash("The model has been trained and saved to the database")
-            # Redirect to the project page
-            return redirect(url_for('project2', project=project_id))
+            flash("The model is trained and saved in the database.")
+            # Redirect to the word embedding page
+            return redirect(url_for('word_embedding', model=new_id))
         else:  # w2v only model
-            training_set = [simple_preprocess(tweet.text) for tweet in tweets]
+            flash("W2V only models are not implemented yet")
+            #training_set = [simple_preprocess(tweet.text) for tweet in tweets]
             #gensim_w2v = Word2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
             #
         #return(redirect(url_for('project2', project=project_id)))
@@ -1412,7 +1412,7 @@ def word_embedding():
     task_id = request.args.get('task', None, type=str)
     show_form = ShowForm()
 
-    if display_form.validate_on_submit():
+    if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
         n_components = 2
         labels = [TweetTagCategory.query.filter_by(id=cat).first().name for cat in displayed_cats]
@@ -1432,16 +1432,21 @@ def word_embedding():
         #return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
         #                       show_form=show_form)
 
-    if show_form.validate_on_submit():
+    if show_form.show.data and show_form.validate_on_submit():
         reduced_dv = AsyncResult(task_id, app=celery_app)
         if reduced_dv.state == 'PENDING':
-            flash("The process is not over yet :(")
+            flash("The process is not over yet :/")
         elif reduced_dv.state == 'SUCCESS':
             data_x, data_y, data_z, labels = reduced_dv.get()
             if data_z != []:
-                return render_template('3D_scatter_plot.html', data_x=data_x, data_y=data_y, data_z=data_z,
-                               labels=json.dumps(labels))
-            return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
+                #return render_template("3D_scatter_plot.html", data_x=data_x, data_y=data_y, data_z=data_z,
+                #                       labels=json.dumps(labels))
+                return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
+                                       show_form=show_form, data_x=data_x, data_y=data_y, data_z=data_z,
+                                       labels=json.dumps(labels))
+            return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
+                                       show_form=show_form, data_x=data_x, data_y=data_y,
+                                       labels=json.dumps(labels))
         else:
             flash('Something went wrong somewhere... :(')
 
@@ -1450,7 +1455,7 @@ def word_embedding():
                            show_form=show_form_param)
 
 
-from nlp4all.utils import addition
+from nlp4all.tasks import addition
 @app.route('/html_de_ses_morts', methods=['GET'])
 def test_html():
     a = 2
@@ -1458,13 +1463,3 @@ def test_html():
     add = addition.delay(a, b)
     form = ShowForm()
     return render_template('html_de_ses_morts.html', add=add, form=form)
-
-
-from time import sleep
-#background process happening without any refreshing
-@app.route('/background_process_test')
-def background_process_test():
-    a = 2
-    b = 4
-    sleep(2)
-    return str(a + b)

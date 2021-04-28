@@ -6,9 +6,9 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-<div id="tester" style="width:600px;height:500px;"></div>
+<div id="3D_graph" style="width:600px;height:500px;"></div>
 <script>
-    TESTER = document.getElementById('tester');
+    GRAPH = document.getElementById('3D_graph');
     var data = [];
     var data_x = {{ data_x }};
     var data_y = {{ data_y }};
@@ -38,7 +38,7 @@
         t: 0
       },
       title: '3D scatter plot'};
-    Plotly.newPlot(TESTER, data, layout);
+    Plotly.newPlot(GRAPH, data, layout);
 </script>
 </body>
 </html>

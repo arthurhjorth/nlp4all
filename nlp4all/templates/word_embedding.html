@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <div class="content-section">
         <form method="POST" action="">
             {{ display_form.hidden_tag() }}
@@ -47,9 +48,78 @@
             <form method="POST" action="">
                 {{ show_form.hidden_tag() }}
                 <div class="form-group">
-                    {{ show_form.show }}
+                    {{ show_form.show(class="btn btn-outline-info") }}
                 </div>
             </form>
+            {% if data_z %}
+            <div id="3D_graph"></div>
+            {% endif %}
+            {% if data_x and not data_z %}
+            <div id="2D_graph"></div>
+            {% endif %}
         </div>
     {% endif %}
+
+    <script>
+        GRAPH = document.getElementById('3D_graph');
+        var data = [];
+        var data_x = {{ data_x }};
+        var data_y = {{ data_y }};
+        var data_z = {{ data_z }};
+        var labels = {{ labels|safe }};
+        for (i = 0; i < data_x.length; i++) {
+            var trace = {
+                x: data_x[i],
+                y: data_y[i],
+                z: data_z[i],
+                mode: 'markers',
+                name: labels[i],
+                marker: {
+                    size: 12,
+                    line: {
+                    color: 'rgba(217, 217, 217, 0.14)',
+                    width: 0.5},
+                    opacity: 0.4},
+                type: 'scatter3d'
+            };
+            data.push(trace);
+        };
+        var layout = {margin: {
+            l: 0,
+            r: 0,
+            b: 0,
+            t: 0
+          },
+          title: '3D scatter plot'};
+        Plotly.newPlot(GRAPH, data, layout);
+    </script>
+    <script>
+        GRAPH = document.getElementById('2D_graph');
+        var data = []
+        var data_x = {{ data_x }};
+        var data_y = {{ data_y }};
+        var labels = {{ labels|safe }};
+        for (i = 0; i < data_x.length; i++) {
+            var trace = {
+              x: data_x[i],
+              y: data_y[i],
+              mode: 'markers',
+              type: 'scatter',
+              name: labels[i],
+              marker: {
+                    size: 10,
+                    line: {
+                    color: 'rgba(217, 217, 217, 0.14)',
+                    width: 0.5},
+                    opacity: 0.4}
+            };
+            data.push(trace);
+        }
+
+        var layout = {
+          title:'Data Labels Hover'
+        };
+
+        Plotly.newPlot(GRAPH, data, layout);
+    </script>
 {% endblock content %}
