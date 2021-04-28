@@ -106,7 +106,7 @@ def project2():
             training_set = [TaggedDocument(simple_preprocess(tweet.text), [tweet.id]) for tweet in tweets]
             gensim_d2v = Doc2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
             gensim_d2v.build_vocab(training_set)
-            train_d2v(pickle.dumps(gensim_d2v), training_set)
+            train_d2v(pickle.dumps(gensim_d2v), training_set)  # add .delay to compute it with celery
             # save the model to the db
             new_id = max([model.id for model in D2VModel.query.all()]) + 1
             d2v = D2VModel(id=new_id, description=name)
@@ -123,7 +123,7 @@ def project2():
             #
         #return(redirect(url_for('project2', project=project_id)))
 
-    return render_template('project2.html', title='About', project=project, analyses=analyses,
+    return render_template('project2.html', title='Project', project=project, analyses=analyses,
                            bayesian_form=bayesian_form, embedding_form=embedding_form)
 
 
@@ -1357,8 +1357,8 @@ def save_annotation():
     return jsonify(words,coordinates['txt_coords'])
 
 
-@app.route('/plotly_scatter_plot', methods=['GET'])
-def plotly_scatter_plot():
+@app.route('/2D_scatter_plot', methods=['GET'])
+def scatter_plot_2D():
     model = D2VModel.query.filter_by(id=2).first().load()
     cats = [1,2,3]
     data_x = []
@@ -1373,7 +1373,7 @@ def plotly_scatter_plot():
         data_x.append(list(cat_vecs[:,0]))
         data_y.append(list(cat_vecs[:,1]))
     print(labels)
-    return render_template('plotly_scatterplot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
+    return render_template('2D_scatter_plot.html', data_x=data_x, data_y=data_y, labels=json.dumps(labels))
 
 
 @app.route('/3D_scatter_plot', methods=['GET'])
@@ -1429,8 +1429,6 @@ def word_embedding():
         reduced_dv = reduce_dimension.delay(dv, displayed_cats, reduction_function, n_components, labels)
         flash("The dimension reduction is processing")
         return redirect(url_for('word_embedding', model=model_id, task=reduced_dv.id))
-        #return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
-        #                       show_form=show_form)
 
     if show_form.show.data and show_form.validate_on_submit():
         reduced_dv = AsyncResult(task_id, app=celery_app)
@@ -1439,8 +1437,6 @@ def word_embedding():
         elif reduced_dv.state == 'SUCCESS':
             data_x, data_y, data_z, labels = reduced_dv.get()
             if data_z != []:
-                #return render_template("3D_scatter_plot.html", data_x=data_x, data_y=data_y, data_z=data_z,
-                #                       labels=json.dumps(labels))
                 return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
                                        show_form=show_form, data_x=data_x, data_y=data_y, data_z=data_z,
                                        labels=json.dumps(labels))
