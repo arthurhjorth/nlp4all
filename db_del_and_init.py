@@ -61,7 +61,7 @@ for f in files:
     with open(data_dir+f) as inf:
         print(f)
         counter = 0
-        for line in inf.readlines()[:200]: # choose how many tweets you want from each party file
+        for line in inf.readlines()[::]: # choose how many tweets you want from each party file
             indict = json.loads(line)
 #             add cateogry if it does not already exist
             if indict['twitter_handle'] not in existing_tag_names:
@@ -233,5 +233,5 @@ print(d2v_model.epochs)
 print(gensim_d2v.epochs)
 
 
-for t in Tweet.query.all():
-    print(t)
+"""for t in Tweet.query.all():
+    print(t)"""
