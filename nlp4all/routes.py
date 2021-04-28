@@ -1406,7 +1406,7 @@ def word_embedding():
     # form to display what you want
     model_id = request.args.get('model', None, type=int)
     model = D2VModel.query.filter_by(id=model_id).first().load()
-    display_form = DisplayWordEmbeddingForm()
+    display_form = DisplayWordEmbeddingForm(nb_vecs=200)
     display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]  # should be changed to contain only the project's cats
     display_form.method.choices = [('1', 'PCA'), ('2', 't-SNE')]
     task_id = request.args.get('task', None, type=str)
@@ -1415,6 +1415,7 @@ def word_embedding():
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
         n_components = 2
+        nb_vecs = display_form.nb_vecs.data
         labels = [TweetTagCategory.query.filter_by(id=cat).first().name for cat in displayed_cats]
         if display_form.dimension.data:  # if 3D
             n_components = 3
@@ -1424,9 +1425,12 @@ def word_embedding():
             reduction_function = 'reduce_with_PCA'
         elif display_form.method.data == '2':
             reduction_function = 'reduce_with_TSNE'
-        tweets = Tweet.query.filter(Tweet.category.in_(displayed_cats)).all()
-        dv = np.array([model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]).tolist()
-        reduced_dv = reduce_dimension.delay(dv, displayed_cats, reduction_function, n_components, labels)
+        # getting the tweets from the database
+        tweets = []
+        for cat in displayed_cats:
+            tweets.extend(Tweet.query.filter_by(category=cat).all()[:nb_vecs])
+        dv = np.array([model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]).tolist()  # takes too much time
+        reduced_dv = reduce_dimension.delay(dv, displayed_cats, reduction_function, n_components, labels, nb_vecs)
         flash("The dimension reduction is processing")
         return redirect(url_for('word_embedding', model=model_id, task=reduced_dv.id))
 

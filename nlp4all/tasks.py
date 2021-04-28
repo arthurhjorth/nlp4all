@@ -29,12 +29,12 @@ def reduce_with_TSNE(data, n_components=2, perplexity=30, n_iter=1000):
 
 
 @celery_app.task
-def separate_by_cat(data, cats):
-    cat_lengths = []
+def separate_by_cat(data, cats, nb_vecs):
+    cat_lengths = []  # nb of displayed tweets for each cat
     separated_data = []
     for cat in cats:
         tweets = Tweet.query.filter_by(category=cat).all()
-        cat_lengths.append(len(tweets))
+        cat_lengths.append(min(len(tweets), nb_vecs))
     current_pos = 0
     for cat_length in cat_lengths:
         separated_data.append(data[current_pos:current_pos+cat_length])
@@ -43,7 +43,7 @@ def separate_by_cat(data, cats):
 
 
 @celery_app.task
-def reduce_dimension(dv, cats, method, n_components, labels):
+def reduce_dimension(dv, cats, method, n_components, labels, nb_vecs):
     data_x = []
     data_y = []
     data_z = []  # always created, but actually used only in 3D
@@ -52,7 +52,7 @@ def reduce_dimension(dv, cats, method, n_components, labels):
     elif method == 'reduce_with_TSNE':
         reduction_function = reduce_with_TSNE
     reduced_dv = reduction_function(dv, n_components=n_components)
-    separated_docvecs = separate_by_cat(reduced_dv, cats)
+    separated_docvecs = separate_by_cat(reduced_dv, cats, nb_vecs)
     for cat_vecs in separated_docvecs:
         data_x.append(cat_vecs[:,0].tolist())
         data_y.append(cat_vecs[:,1].tolist())
