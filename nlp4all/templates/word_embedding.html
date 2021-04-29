@@ -1,6 +1,40 @@
 {% extends "layout.html" %}
 {% block content %}
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <h1>Word embedding analysis tools</h1>
+    <div class="content-section">
+        <form method="POST" action="">
+            {{ word_most_sim_form.hidden_tag() }}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Get most similar words</legend>
+                <div class="form-group">
+                    {{ word_most_sim_form.word.label(class="form-control-label") }}
+
+                    {% if word_most_sim_form.word.errors %}
+                        {{ word_most_sim_form.word(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in word_most_sim_form.word.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ word_most_sim_form.word(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ word_most_sim_form.word_most_sim_submit(class="btn btn-outline-info") }}
+                </div>
+            </fieldset>
+        </form>
+        {% if most_sim_words != None %}
+        <div>
+            {% for word in most_sim_words %}
+            <li> <p align="justify">{{ word }} ({{ most_sim_words[word] }})</p> </li>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
     <div class="content-section">
         <form method="POST" action="">
             {{ display_form.hidden_tag() }}
@@ -51,9 +85,9 @@
                     {{ display_form.dimension.label(class="form-group-label") }}
                     {{ display_form.dimension(class="form-group-input") }}
                 </div>
-            <div class="form-group">
-                {{ display_form.submit_display(class="btn btn-outline-info") }}
-            </div>
+                <div class="form-group">
+                    {{ display_form.submit_display(class="btn btn-outline-info") }}
+                </div>
             </fieldset>
         </form>
     </div>
@@ -93,7 +127,7 @@
                     line: {
                     color: 'rgba(217, 217, 217, 0.14)',
                     width: 0.5},
-                    opacity: 0.2},
+                    opacity: 0.4},
                 type: 'scatter3d'
             };
             data.push(trace);

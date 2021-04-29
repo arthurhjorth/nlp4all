@@ -185,3 +185,8 @@ class DisplayWordEmbeddingForm(FlaskForm):
 
 class ShowForm(FlaskForm):
     show = SubmitField('Show')
+
+
+class WordMostSimForm(FlaskForm):
+    word = StringField("Choose a word", validators=[DataRequired()])
+    word_most_sim_submit = SubmitField("Get most similar words")

@@ -1406,11 +1406,19 @@ def word_embedding():
     # form to display what you want
     model_id = request.args.get('model', None, type=int)
     model = D2VModel.query.filter_by(id=model_id).first().load()
-    display_form = DisplayWordEmbeddingForm(nb_vecs=200)
+    display_form = DisplayWordEmbeddingForm(nb_vecs=50)
     display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]  # should be changed to contain only the project's cats
     display_form.method.choices = [('1', 'PCA'), ('2', 't-SNE')]
     task_id = request.args.get('task', None, type=str)
     show_form = ShowForm()
+    word_most_sim_form = WordMostSimForm()
+    most_sim_words = None
+
+    if word_most_sim_form.word_most_sim_submit.data and word_most_sim_form.validate_on_submit():
+        word = word_most_sim_form.word.data.lower()
+        most_sim_words = dict(model.wv.most_similar(word, topn=10))
+        for word in most_sim_words.keys():
+            most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
 
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
@@ -1443,16 +1451,19 @@ def word_embedding():
             if data_z != []:
                 return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
                                        show_form=show_form, data_x=data_x, data_y=data_y, data_z=data_z,
-                                       labels=json.dumps(labels))
+                                       labels=json.dumps(labels), word_most_sim_form=word_most_sim_form,
+                                       most_sim_words=most_sim_words)
             return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
                                        show_form=show_form, data_x=data_x, data_y=data_y,
-                                       labels=json.dumps(labels))
+                                       labels=json.dumps(labels), word_most_sim_form=word_most_sim_form,
+                                       most_sim_words=most_sim_words)
         else:
             flash('Something went wrong somewhere... :(')
 
     show_form_param = show_form if task_id else None
     return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
-                           show_form=show_form_param)
+                           show_form=show_form_param, word_most_sim_form=word_most_sim_form,
+                           most_sim_words=most_sim_words)
 
 
 from nlp4all.tasks import addition
