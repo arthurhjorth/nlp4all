@@ -166,16 +166,14 @@ for tweet in tweets:
     train_corpus.append(TaggedDocument(simple_preprocess(tweet.text), [tweet.id]))
 print(train_corpus[1])
 
-# see the categories contained the training set
-
-
+print("Start full model training")
 # Create the vocabulary and train the model
 d2v_model.build_vocab(train_corpus)
 d2v_model.train(train_corpus, total_examples=d2v_model.corpus_count, epochs=d2v_model.epochs)
 
 
 # save d2v_model into the database
-d2v = D2VModel(id=1, description="trained on the entire corpus")
+d2v = D2VModel(id=1, description="trained on the entire corpus", project=1)
 d2v.save(d2v_model)
 
 db.session.add(d2v)
@@ -196,25 +194,31 @@ train_corpus = []
 for tweet in danish_tweets:
     train_corpus.append(TaggedDocument(simple_preprocess(tweet.text), [tweet.id]))
 
+print("Start training danish model")
 danish_model.build_vocab(train_corpus)
 danish_model.train(train_corpus, total_examples=danish_model.corpus_count, epochs=danish_model.epochs)
 
-danish_d2v = D2VModel(id=2)
+danish_d2v = D2VModel(id=2, project=1)
 danish_d2v.save(danish_model, description="Model trained only on danish tweets")
 
 db.session.add(danish_d2v)
 db.session.commit()
 
+print("full model project", d2v.project)
+print("danish model project", danish_d2v.project)
+print("gensim models of project1", Project.query.first().d2v_models)
+
 
 ## tests
 
 d2vs = D2VModel.query.all()
-print("nb of models", len(d2vs))
+print("total nb of models", len(d2vs))
 
 new_d2v = d2vs[0]
 gensim_d2v = new_d2v.load()  # loaded model. d2v_model is the initial one
 
-# compare some stuff
+# compare some values before and after loading
+# therefore all the values should be equal
 # vocab length
 print("vocab lengths")
 print(len(d2v_model.wv.index_to_key))

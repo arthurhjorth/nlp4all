@@ -72,6 +72,7 @@ def project2():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
     analyses = project.analyses if (project and project.analyses) else []
+    d2v_models = project.d2v_models if (project and project.d2v_models) else []
     bayesian_form = AddBayesianAnalysisForm()
     embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
     embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]
@@ -110,7 +111,7 @@ def project2():
             train_d2v(pickle.dumps(gensim_d2v), training_set)  # add .delay to compute it with celery
             # save the model to the db
             new_id = max([model.id for model in D2VModel.query.all()]) + 1
-            d2v = D2VModel(id=new_id, description=name)
+            d2v = D2VModel(id=new_id, description=name, project=project_id)
             d2v.save(gensim_d2v)
             db.session.add(d2v)
             db.session.commit()
@@ -124,7 +125,7 @@ def project2():
             #
         #return(redirect(url_for('project2', project=project_id)))
 
-    return render_template('project2.html', title='Project', project=project, analyses=analyses,
+    return render_template('project2.html', title='Project', project=project, analyses=analyses, d2v_models=d2v_models,
                            bayesian_form=bayesian_form, embedding_form=embedding_form)
 
 
@@ -1407,6 +1408,7 @@ def word_embedding():
     # form to display what you want
     model_id = request.args.get('model', None, type=int)
     model = D2VModel.query.filter_by(id=model_id).first().load()
+    project = D2VModel.query.filter_by(id=model_id).first().project
     display_form = DisplayWordEmbeddingForm(nb_vecs=50)
     display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]  # should be changed to contain only the project's cats
     display_form.method.choices = [('1', 'PCA'), ('2', 't-SNE')]
@@ -1458,19 +1460,22 @@ def word_embedding():
         elif reduced_dv.state == 'SUCCESS':
             data_x, data_y, data_z, labels = reduced_dv.get()
             if data_z != []:
-                return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
+                return render_template("word_embedding.html", title='Display vectors', project=project,
+                                       display_form=display_form,
                                        show_form=show_form, data_x=data_x, data_y=data_y, data_z=data_z,
                                        labels=json.dumps(labels), word_most_sim_form=word_most_sim_form,
-                                       most_sim_words=most_sim_words)
-            return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
-                                       show_form=show_form, data_x=data_x, data_y=data_y,
-                                       labels=json.dumps(labels), word_most_sim_form=word_most_sim_form,
-                                       most_sim_words=most_sim_words)
+                                       most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
+            return render_template("word_embedding.html", title='Display vectors', project=project,
+                                   display_form=display_form,
+                                   show_form=show_form, data_x=data_x, data_y=data_y,labels=json.dumps(labels),
+                                   word_most_sim_form=word_most_sim_form, most_sim_words=most_sim_words,
+                                   word_sim_form=word_sim_form, word_sim=word_sim)
         else:
             flash('Something went wrong somewhere... :(')
 
     show_form_param = show_form if task_id else None
-    return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
+    return render_template("word_embedding.html", title='Word embedding', project=project,
+                           display_form=display_form,
                            show_form=show_form_param, word_most_sim_form=word_most_sim_form,
                            most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
 

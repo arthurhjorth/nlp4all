@@ -2,8 +2,9 @@
 {% block content %}
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <h1>Word embedding analysis tools</h1>
+    <div><a href="{{ url_for('project2') }}?project={{ project }}">Back to project page</a></div>
     <div class="content-section">
-        <h3>Words similarity</h3>
+        <h2>Words similarity</h2>
         <form method="POST" action="">
             {{ word_sim_form.hidden_tag() }}
             <fieldset class="form-group">
@@ -83,7 +84,7 @@
         <form method="POST" action="">
             {{ display_form.hidden_tag() }}
             <fieldset class="form-group">
-                <legend class="border-bottom mb-4">Display the embedded vectors</legend>
+                <h2>Display the embedded vectors</h2>
                 <div class="form-group">
                     {{ display_form.displayed_set.label(class="form-control-label") }}
 
@@ -134,9 +135,7 @@
                 </div>
             </fieldset>
         </form>
-    </div>
-    {% if show_form %}
-        <div class="content-section">
+        {% if show_form %}
             <form method="POST" action="">
                 {{ show_form.hidden_tag() }}
                 <div class="form-group">
@@ -144,13 +143,14 @@
                 </div>
             </form>
             {% if data_z %}
-            <div id="3D_graph"></div>
+                <div id="3D_graph"></div>
             {% endif %}
             {% if data_x and not data_z %}
-            <div id="2D_graph"></div>
+                <div id="2D_graph"></div>
             {% endif %}
-        </div>
-    {% endif %}
+        {% endif %}
+    </div>
+
 
     <script>
         GRAPH = document.getElementById('3D_graph');

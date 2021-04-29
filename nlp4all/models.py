@@ -365,6 +365,7 @@ class Project(db.Model):
     description = db.Column(db.String)
     organization = db.Column(db.Integer, db.ForeignKey('organization.id'))
     analyses = db.relationship('BayesianAnalysis')
+    d2v_models = db.relationship('D2VModel')
     categories = db.relationship('TweetTagCategory', secondary='project_categories')
     tf_idf = db.Column(JSON)
     tweets = db.relationship('Tweet', secondary='tweet_project')
@@ -652,6 +653,7 @@ class TweetAnnotation(db.Model):
 class D2VModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(50))
+    project = db.Column(db.Integer, db.ForeignKey("project.id"))
     model = db.Column(db.PickleType)
 
     def save(self, gensim_model, description=None):

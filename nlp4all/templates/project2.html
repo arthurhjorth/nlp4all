@@ -4,19 +4,30 @@
   <h1>Project Title: {{ project.name }} </h1>
 <br>
 <div class="content-section" id="my_analyses">
-<h2>My analyses on project {{ project.name }} </h2>
-{% for a in analyses %}
-    <div class="content-section" id="analyses_list">
-        <a class="nav-item nav-link" href="{{ url_for('analysis') }}?analysis={{a.id}}">{{a.name}}</a>
-    </div>
-{% endfor %}
+    <h2>My analyses on project {{ project.name }} </h2>
+    {% if analyses != [] %}
+        <legend class="border-bottom mb-4">Bayesian analyses</legend>
+        <div class="content-section" id="analyses_list">
+            {% for a in analyses %}
+                <a class="nav-item nav-link" href="{{ url_for('analysis') }}?analysis={{a.id}}">{{a.name}}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if d2v_models != [] %}
+        <legend class="border-bottom mb-4">Word embedding models</legend>
+        <div class="content-section" id="d2v_models_list">
+            {% for d2v in d2v_models %}
+                <a class="nav-item nav-link" href="{{ url_for('word_embedding') }}?model={{d2v.id}}">{{d2v.description}}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
 
 {% for p in projects %}
     <a class="nav-item nav-link" href="{{ url_for('project') }}?project={{ p.id }}">p.name</a>
 {% endfor %}
 <div class="content-section" id="select_form">
-<h1>Create New Analysis</h1>
+<h2>Create New Analysis</h2>
     <form method="POST" action="">
         <div class="select_menu">
             <label for="proj_type">Choose the type of analysis: </label>
@@ -29,6 +40,7 @@
     </form>
 </div>
 <div class="content-section" id="shared_corpus_bay">
+    <legend class="border-bottom mb-4">Bayesian analysis</legend>
     <form method="POST" action="">
     {{ bayesian_form.hidden_tag() }}
         <fieldset class="form-group">
@@ -69,6 +81,7 @@
     </form>
 </div>
 <div class="content-section" id="random_corpus_bay">
+    <legend class="border-bottom mb-4">Bayesian analysis</legend>
     <form method="POST" action="">
     {{ bayesian_form.hidden_tag() }}
         <fieldset class="form-group">
@@ -109,6 +122,7 @@
     </form>
 </div>
 <div class="content-section" id="word_embedding">
+    <legend class="border-bottom mb-4">Word embedding model</legend>
     <form method="POST" action="">
     {{ embedding_form.hidden_tag() }}
         <fieldset class="form-group">
@@ -177,6 +191,7 @@
       //unhides first option content
       $("#my_analyses").show();
       $("#analyses_list").show();
+      $("#d2v_models_list").show();
       $("#select_form").show();
       $("#shared_corpus_bay").show();
 
@@ -187,6 +202,7 @@
         //unhides current item
         $("#my_analyses").show();
         $("#analyses_list").show();
+        $("#d2v_models_list").show();
         $("#select_form").show();
         $('#'+$(this).val()).show();
       });
