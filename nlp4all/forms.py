@@ -190,3 +190,8 @@ class ShowForm(FlaskForm):
 class WordMostSimForm(FlaskForm):
     word = StringField("Choose a word", validators=[DataRequired()])
     word_most_sim_submit = SubmitField("Get most similar words")
+
+class WordSimForm(FlaskForm):
+    word1 = StringField("First word", validators=[DataRequired()])
+    word2 = StringField("Second word", validators=[DataRequired()])
+    word_sim_submit = SubmitField("Compute similarity")

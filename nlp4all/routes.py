@@ -21,6 +21,7 @@ import numpy as np
 import pickle
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from sklearn.metrics.pairwise import cosine_similarity
 from gensim.utils import simple_preprocess
 from gensim.models.doc2vec import TaggedDocument, Doc2Vec
 from celery.result import AsyncResult
@@ -1413,12 +1414,20 @@ def word_embedding():
     show_form = ShowForm()
     word_most_sim_form = WordMostSimForm()
     most_sim_words = None
+    word_sim_form = WordSimForm()
+    word_sim = None
 
     if word_most_sim_form.word_most_sim_submit.data and word_most_sim_form.validate_on_submit():
         word = word_most_sim_form.word.data.lower()
         most_sim_words = dict(model.wv.most_similar(word, topn=10))
         for word in most_sim_words.keys():
             most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
+
+    if word_sim_form.word_sim_submit.data and word_sim_form.validate_on_submit():
+        word1 = word_sim_form.word1.data.lower()
+        word2 = word_sim_form.word2.data.lower()
+        word_sim = cosine_similarity([model.wv[word1]], [model.wv[word2]])
+        print(word_sim)
 
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
@@ -1463,7 +1472,7 @@ def word_embedding():
     show_form_param = show_form if task_id else None
     return render_template("word_embedding.html", title='Display vectors', display_form=display_form,
                            show_form=show_form_param, word_most_sim_form=word_most_sim_form,
-                           most_sim_words=most_sim_words)
+                           most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
 
 
 from nlp4all.tasks import addition

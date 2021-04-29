@@ -3,6 +3,50 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <h1>Word embedding analysis tools</h1>
     <div class="content-section">
+        <h3>Words similarity</h3>
+        <form method="POST" action="">
+            {{ word_sim_form.hidden_tag() }}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Compute words similarity</legend>
+                <div class="form-group">
+                    {{ word_sim_form.word1.label(class="form-control-label") }}
+
+                    {% if word_sim_form.word1.errors %}
+                        {{ word_sim_form.word1(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in word_sim_form.word1.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ word_sim_form.word1(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ word_sim_form.word2.label(class="form-control-label") }}
+
+                    {% if word_sim_form.word2.errors %}
+                        {{ word_sim_form.word2(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in word_sim_form.word2.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ word_sim_form.word2(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ word_sim_form.word_sim_submit(class="btn btn-outline-info") }}
+                </div>
+            </fieldset>
+        </form>
+        {% if word_sim != None %}
+        <div>
+            <p>{{ word_sim[0][0] }}</p>
+        </div>
+        {% endif %}
+
         <form method="POST" action="">
             {{ word_most_sim_form.hidden_tag() }}
             <fieldset class="form-group">
