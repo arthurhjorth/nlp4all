@@ -652,9 +652,11 @@ class TweetAnnotation(db.Model):
 
 class D2VModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20))
     description = db.Column(db.String(50))
     project = db.Column(db.Integer, db.ForeignKey("project.id"))
     model = db.Column(db.PickleType)
+    public = db.Column(db.String)
 
     def save(self, gensim_model, description=None):
         # /!\ Erases an possible already saved model

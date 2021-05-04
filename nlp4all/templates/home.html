@@ -1,14 +1,24 @@
 {% extends "layout.html" %}
 {% block content %}
 <h1>Welcome to NLP4All!</h1>
-    <p>This is Natural Languge Processing 4 All (NLP4All). NLPall is designed to make it fun and easy to play with machine learning and language.</p>
+    <p>This is Natural Languge Processing 4 All (NLP4All). NLP4All is designed to make it fun and easy to play with machine learning and language.</p>
     <p>Below you see a list of projects that you can work on. Click on a project to read about it, and to get started.</p>
     </br>
   <h1>My Projects</h1>
     <div class="content-section">
-{% for p in projects %}
-<a class="nav-item nav-link" href="{{ url_for('project2') }}?project={{ p.id }}">{{ p.name }}</a>
-<p>{{ p.description }} </p>
-{% endfor %}
-</div>
+        {% for p in projects %}
+            <a class="nav-item nav-link" href="{{ url_for('project2') }}?project={{ p.id }}">{{ p.name }}</a>
+            <p>{{ p.description }} </p>
+        {% endfor %}
+    </div>
+
+    <h1>Public analyses</h1>
+    <div class="content-section">
+        {% for a in analyses %}
+            {% if a.public == 'all' %}
+                <a class="nav-item nav-link" href="{{ url_for('word_embedding') }}?model={{ a.id }}">{{ a.name }}</a>
+                <p>{{ a.description }} </p>
+            {% endif %}
+        {% endfor %}
+    </div>
 {% endblock content %}

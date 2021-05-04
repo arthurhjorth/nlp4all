@@ -19,6 +19,7 @@ import operator
 import re
 import numpy as np
 import pickle
+import multiprocessing
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics.pairwise import cosine_similarity
@@ -33,7 +34,8 @@ from celery.result import AsyncResult
 @login_required
 def home():
     my_projects = get_user_projects(current_user)
-    return render_template('home.html', projects=my_projects)
+    analyses = D2VModel.query.all()
+    return render_template('home.html', projects=my_projects, analyses=analyses)
 
 @app.route("/robot_summary", methods=['GET', 'POST'])
 def robot_summary():
@@ -76,6 +78,7 @@ def project2():
     bayesian_form = AddBayesianAnalysisForm()
     embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
     embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]
+    embedding_form.public.choices = [('1', 'No'), ('2', 'Within the current project'), ('3', 'For everyone')]
 
     if bayesian_form.submit_bay.data and bayesian_form.validate_on_submit():
         userid = current_user.id  # useful?
@@ -99,19 +102,28 @@ def project2():
     if embedding_form.submit_emb and embedding_form.validate_on_submit():
         #userid = current_user.id  # useful?
         name = embedding_form.name.data
+        description = embedding_form.description.data
         vector_size = embedding_form.vector_size.data
         epochs = embedding_form.epochs.data
         training_cats = embedding_form.training_set.data
+        public = embedding_form.public.data
+        if public == '1':
+            public = 'no'
+        elif public == '2':
+            public = 'project'
+        elif public == '3':
+            public = 'all'
         tweets = Tweet.query.filter(Tweet.category.in_(training_cats)).all()
         if embedding_form.d2v.data:  # d2v model
             # should be done in the background
             training_set = [TaggedDocument(simple_preprocess(tweet.text), [tweet.id]) for tweet in tweets]
-            gensim_d2v = Doc2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
+            cores = multiprocessing.cpu_count()
+            gensim_d2v = Doc2Vec(vector_size=vector_size, min_count=5, epochs=epochs, workers=cores-1)
             gensim_d2v.build_vocab(training_set)
             train_d2v(pickle.dumps(gensim_d2v), training_set)  # add .delay to compute it with celery
             # save the model to the db
             new_id = max([model.id for model in D2VModel.query.all()]) + 1
-            d2v = D2VModel(id=new_id, description=name, project=project_id)
+            d2v = D2VModel(id=new_id, name=name, description=description, project=project_id, public=public)
             d2v.save(gensim_d2v)
             db.session.add(d2v)
             db.session.commit()
@@ -1414,22 +1426,30 @@ def word_embedding():
     display_form.method.choices = [('1', 'PCA'), ('2', 't-SNE')]
     task_id = request.args.get('task', None, type=str)
     show_form = ShowForm()
-    word_most_sim_form = WordMostSimForm()
+    word_most_sim_form = WordMostSimForm(model=model)
     most_sim_words = None
     word_sim_form = WordSimForm()
     word_sim = None
 
     if word_most_sim_form.word_most_sim_submit.data and word_most_sim_form.validate_on_submit():
         word = word_most_sim_form.word.data.lower()
-        most_sim_words = dict(model.wv.most_similar(word, topn=10))
-        for word in most_sim_words.keys():
-            most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
+        if word in model.wv.index_to_key:
+            most_sim_words = dict(model.wv.most_similar(word, topn=10))
+            for word in most_sim_words.keys():
+                most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
+        else:
+            flash("Word '{}' not in the vocabulary".format(word))
 
     if word_sim_form.word_sim_submit.data and word_sim_form.validate_on_submit():
         word1 = word_sim_form.word1.data.lower()
         word2 = word_sim_form.word2.data.lower()
-        word_sim = cosine_similarity([model.wv[word1]], [model.wv[word2]])
-        print(word_sim)
+        if word1 not in model.wv.index_to_key:
+            flash("Word '{}' not in the vocabulary".format(word1))
+        elif word2 not in model.wv.index_to_key:
+            flash("Word '{}' not in the vocabulary".format(word2))
+        else:
+            word_sim = cosine_similarity([model.wv[word1]], [model.wv[word2]])
+            print(word_sim)
 
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data

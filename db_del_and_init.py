@@ -173,7 +173,7 @@ d2v_model.train(train_corpus, total_examples=d2v_model.corpus_count, epochs=d2v_
 
 
 # save d2v_model into the database
-d2v = D2VModel(id=1, description="trained on the entire corpus", project=1)
+d2v = D2VModel(id=1, name='Full model', description="Trained on the entire corpus", project=1, public='all')
 d2v.save(d2v_model)
 
 db.session.add(d2v)
@@ -198,7 +198,7 @@ print("Start training danish model")
 danish_model.build_vocab(train_corpus)
 danish_model.train(train_corpus, total_examples=danish_model.corpus_count, epochs=danish_model.epochs)
 
-danish_d2v = D2VModel(id=2, project=1)
+danish_d2v = D2VModel(id=2, name='Danish model', project=1, public='all')
 danish_d2v.save(danish_model, description="Model trained only on danish tweets")
 
 db.session.add(danish_d2v)

@@ -3,7 +3,7 @@ from flask_wtf.file import FileField, FileAllowed
 from flask_login import current_user
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, TextAreaField,\
     SelectMultipleField, SelectField, RadioField, FormField, FloatField, HiddenField
-from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, AnyOf
 from nlp4all.models import User, Project 
 from wtforms.fields.core import Label
 
@@ -168,10 +168,12 @@ class SelectCategoryForm(FlaskForm):
 
 class AddWordEmbeddingForm(FlaskForm):
     name = StringField('Title of Analysis', validators=[DataRequired()])
+    description = StringField('Description of the model', validators=[DataRequired()])
     d2v = BooleanField('Doc2Vec model')  # create a Doc2Vec or a Word2Vec
     vector_size = IntegerField('Embedded vector size')
     epochs = IntegerField('Epochs')
     training_set = SelectMultipleField("Data to train on", validators=[DataRequired()])
+    public = SelectField("Public project?", default='no')
     submit_emb = SubmitField('Create W2V Analysis')
 
 
