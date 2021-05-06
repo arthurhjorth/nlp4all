@@ -110,6 +110,7 @@ all_cats = TweetTagCategory.query.all()
 cats = [all_cats[1], all_cats[7]]
 cat_ids = [all_cats[1].id, all_cats[7].id]
 
+
 # Telma added
 tweets1 = Tweet.query.filter_by(category=2).all() # this should be done in a better way..
 tweets2 = Tweet.query.filter_by(category=8).all()
@@ -135,10 +136,15 @@ tweet_id_and_cat = { t.id : t.category for t in tweet_objs }
 training_and_test_sets = create_n_train_and_test_sets(30, tweet_id_and_cat)
 
 
+# Full project
+project = Project(name='Full project', description='Project with all the data', organization=org.id, categories=all_cats,
+                  tweets=Tweet.query.all(), tf_idf=tf_idf, training_and_test_sets=training_and_test_sets)
+db.session.add(project)
+
 #project = Project(name="DF og Ehl", organization=org.id, categories=cats)
 #project= add_project(name="DF og ehl", description="", org=org, cat_ids=cats)
-project = Project(name = 'test project', description = 'Just a test project', organization = org.id, categories = cats_objs,
-                  tweets = tweet_objs, tf_idf = tf_idf, training_and_test_sets = training_and_test_sets)
+project = Project(name='Test project', description='Just a test project', organization=org.id, categories=cats_objs,
+                  tweets=tweet_objs, tf_idf=tf_idf, training_and_test_sets=training_and_test_sets)
 db.session.add(project)
 
 

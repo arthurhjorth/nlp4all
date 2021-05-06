@@ -85,8 +85,7 @@ def project2():
     d2v_models = project.d2v_models if (project and project.d2v_models) else []
     bayesian_form = AddBayesianAnalysisForm()
     embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
-    embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]
-    embedding_form.public.choices = [('no', 'No'), ('project', 'Project only'), ('all', 'For everyone')]
+    embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in project.categories]
 
     if bayesian_form.submit_bay.data and bayesian_form.validate_on_submit():
         userid = current_user.id  # useful?
@@ -115,12 +114,10 @@ def project2():
         epochs = embedding_form.epochs.data
         training_cats = embedding_form.training_set.data
         public = embedding_form.public.data
-        """if public == '1':
+        if public:
+            public = 'all'
+        else:
             public = 'no'
-        elif public == '2':
-            public = 'project'
-        elif public == '3':
-            public = 'all'"""
         tweets = Tweet.query.filter(Tweet.category.in_(training_cats)).all()
         if embedding_form.d2v.data:  # d2v model
             # should be done in the background
@@ -912,7 +909,7 @@ def excluded_tweets(matrix_id):
     
     cm_info = sorted([t for t in cm_info.items()], key=lambda x:x[1]["probability"], reverse=True)
     cm_info = [t[1] for t in cm_info]
-    return render_template('matrix_tweets.html', cm_info = cm_info, matrix=matrix, title = title)
+    return render_template('matrix_tweets.html', cm_info=cm_info, matrix=matrix, title = title)
 
 
 @app.route("/matrix_overview", methods=['GET', 'POST'])
@@ -1427,10 +1424,12 @@ def scatter_plot_3D():
 def word_embedding():
     # form to display what you want
     model_id = request.args.get('model', None, type=int)
-    model = D2VModel.query.filter_by(id=model_id).first().load()
+    db_model = D2VModel.query.filter_by(id=model_id).first()
+    model = db_model.load()
     project = D2VModel.query.filter_by(id=model_id).first().project
     display_form = DisplayWordEmbeddingForm(nb_vecs=50)
-    display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]  # should be changed to contain only the project's cats
+    display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat
+                                          in Project.query.filter_by(id=project).first().categories]
     display_form.method.choices = [('1', 'PCA'), ('2', 't-SNE')]
     task_id = request.args.get('task', None, type=str)
     show_form = ShowForm()
@@ -1488,12 +1487,12 @@ def word_embedding():
             data_x, data_y, data_z, labels = reduced_dv.get()
             if data_z != []:
                 return render_template("word_embedding.html", title='Display vectors', project=project,
-                                       display_form=display_form,
+                                       db_model=db_model, display_form=display_form,
                                        show_form=show_form, data_x=data_x, data_y=data_y, data_z=data_z,
                                        labels=json.dumps(labels), word_most_sim_form=word_most_sim_form,
                                        most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
             return render_template("word_embedding.html", title='Display vectors', project=project,
-                                   display_form=display_form,
+                                   db_model=db_model, display_form=display_form,
                                    show_form=show_form, data_x=data_x, data_y=data_y,labels=json.dumps(labels),
                                    word_most_sim_form=word_most_sim_form, most_sim_words=most_sim_words,
                                    word_sim_form=word_sim_form, word_sim=word_sim)
@@ -1502,7 +1501,7 @@ def word_embedding():
 
     show_form_param = show_form if task_id else None
     return render_template("word_embedding.html", title='Word embedding', project=project,
-                           display_form=display_form,
+                           db_model=db_model, display_form=display_form,
                            show_form=show_form_param, word_most_sim_form=word_most_sim_form,
                            most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
 
@@ -1510,13 +1509,14 @@ def word_embedding():
 @app.route('/models_comparison', methods=['GET', 'POST'])
 @login_required
 def models_comparison():
+    project = request.args.get('project', None, type=int)
     # get models if chosen, None if not
     models_id = request.args.getlist('model')
     models = D2VModel.query.filter(D2VModel.id.in_(models_id)).all()
-    print(models)
     # define forms and variables
     choose_models_form = ChooseModelsForm()
-    choose_models_form.models.choices = [(str(model.id), model.name) for model in D2VModel.query.all()]
+    choose_models_form.models.choices = [(str(model.id), model.name) for model
+                                         in Project.query.filter_by(id=project).first().d2v_models]
     words_sim_form = WordSimForm()
     sims = {}
     most_sim_form = WordMostSimForm()
@@ -1540,8 +1540,9 @@ def models_comparison():
             if compute_sim:
                 sims[model.name] = cosine_similarity([gensim_model.wv[word1]], [gensim_model.wv[word2]])
 
-    return render_template('models_comparison.html', choose_models_form=choose_models_form, models=models,
-                           words_sim_form=words_sim_form, most_sim_form=most_sim_form, sims=sims)
+    return render_template('models_comparison.html', project=project, models=models,
+                           choose_models_form=choose_models_form, words_sim_form=words_sim_form,
+                           most_sim_form=most_sim_form, sims=sims)
 
 
 from nlp4all.tasks import addition
