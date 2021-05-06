@@ -173,7 +173,7 @@ class AddWordEmbeddingForm(FlaskForm):
     vector_size = IntegerField('Embedded vector size')
     epochs = IntegerField('Epochs')
     training_set = SelectMultipleField("Data to train on", validators=[DataRequired()])
-    public = SelectField("Public project?", default='no')
+    public = SelectField("Public project?", default='no', validators=[AnyOf('no', 'project', 'all')])
     submit_emb = SubmitField('Create W2V Analysis')
 
 
@@ -193,7 +193,13 @@ class WordMostSimForm(FlaskForm):
     word = StringField("Choose a word", validators=[DataRequired()])
     word_most_sim_submit = SubmitField("Get most similar words")
 
+
 class WordSimForm(FlaskForm):
     word1 = StringField("First word", validators=[DataRequired()])
     word2 = StringField("Second word", validators=[DataRequired()])
     word_sim_submit = SubmitField("Compute similarity")
+
+
+class ChooseModelsForm(FlaskForm):
+    models = SelectMultipleField('List of available models', validators=[DataRequired()])
+    choose_submit = SubmitField('Select models')

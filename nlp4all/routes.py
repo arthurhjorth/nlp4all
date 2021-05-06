@@ -34,8 +34,11 @@ from celery.result import AsyncResult
 @login_required
 def home():
     my_projects = get_user_projects(current_user)
-    analyses = D2VModel.query.all()
-    return render_template('home.html', projects=my_projects, analyses=analyses)
+    analyses = D2VModel.query.filter_by(public='all').all()
+    #create_project = None
+    #if current_user.roles in ['Teacher', 'Admin']:
+    create_project = url_for('add_project')
+    return render_template('home.html', projects=my_projects, analyses=analyses, create_project=create_project)
 
 @app.route("/robot_summary", methods=['GET', 'POST'])
 def robot_summary():
@@ -51,8 +54,13 @@ def data_table():
     test_data.append({'a' : 25, 'b': 200, 'c': 80})
     return render_template('data_table.html', table_data=test_data)
 
+
 @app.route("/add_project", methods=['GET', 'POST'])
+@login_required
 def add_project():
+    #if current_user.role == 'Student':
+    #    flash('You are not allowed to create projects')
+    #    return redirect(url_for('home'))
     form = AddProjectForm()
     # find forst alle mulige organizations
     form.organization.choices = [( str(o.id), o.name ) for o in Organization.query.all()]
@@ -78,7 +86,7 @@ def project2():
     bayesian_form = AddBayesianAnalysisForm()
     embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
     embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in TweetTagCategory.query.all()]
-    embedding_form.public.choices = [('1', 'No'), ('2', 'Within the current project'), ('3', 'For everyone')]
+    embedding_form.public.choices = [('no', 'No'), ('project', 'Project only'), ('all', 'For everyone')]
 
     if bayesian_form.submit_bay.data and bayesian_form.validate_on_submit():
         userid = current_user.id  # useful?
@@ -107,12 +115,12 @@ def project2():
         epochs = embedding_form.epochs.data
         training_cats = embedding_form.training_set.data
         public = embedding_form.public.data
-        if public == '1':
+        """if public == '1':
             public = 'no'
         elif public == '2':
             public = 'project'
         elif public == '3':
-            public = 'all'
+            public = 'all'"""
         tweets = Tweet.query.filter(Tweet.category.in_(training_cats)).all()
         if embedding_form.d2v.data:  # d2v model
             # should be done in the background
@@ -1431,15 +1439,6 @@ def word_embedding():
     word_sim_form = WordSimForm()
     word_sim = None
 
-    if word_most_sim_form.word_most_sim_submit.data and word_most_sim_form.validate_on_submit():
-        word = word_most_sim_form.word.data.lower()
-        if word in model.wv.index_to_key:
-            most_sim_words = dict(model.wv.most_similar(word, topn=10))
-            for word in most_sim_words.keys():
-                most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
-        else:
-            flash("Word '{}' not in the vocabulary".format(word))
-
     if word_sim_form.word_sim_submit.data and word_sim_form.validate_on_submit():
         word1 = word_sim_form.word1.data.lower()
         word2 = word_sim_form.word2.data.lower()
@@ -1449,7 +1448,15 @@ def word_embedding():
             flash("Word '{}' not in the vocabulary".format(word2))
         else:
             word_sim = cosine_similarity([model.wv[word1]], [model.wv[word2]])
-            print(word_sim)
+
+    if word_most_sim_form.word_most_sim_submit.data and word_most_sim_form.validate_on_submit():
+        word = word_most_sim_form.word.data.lower()
+        if word in model.wv.index_to_key:
+            most_sim_words = dict(model.wv.most_similar(word, topn=10))
+            for word in most_sim_words.keys():
+                most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
+        else:
+            flash("Word '{}' not in the vocabulary".format(word))
 
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
@@ -1498,6 +1505,43 @@ def word_embedding():
                            display_form=display_form,
                            show_form=show_form_param, word_most_sim_form=word_most_sim_form,
                            most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
+
+
+@app.route('/models_comparison', methods=['GET', 'POST'])
+@login_required
+def models_comparison():
+    # get models if chosen, None if not
+    models_id = request.args.getlist('model')
+    models = D2VModel.query.filter(D2VModel.id.in_(models_id)).all()
+    print(models)
+    # define forms and variables
+    choose_models_form = ChooseModelsForm()
+    choose_models_form.models.choices = [(str(model.id), model.name) for model in D2VModel.query.all()]
+    words_sim_form = WordSimForm()
+    sims = {}
+    most_sim_form = WordMostSimForm()
+
+    if choose_models_form.choose_submit and choose_models_form.validate_on_submit():
+        models = choose_models_form.models.data
+        return redirect(url_for('models_comparison', model=models))
+
+    if words_sim_form.word_sim_submit and words_sim_form.validate_on_submit():
+        word1 = words_sim_form.word1.data.lower()
+        word2 = words_sim_form.word2.data.lower()
+        for model in models:
+            gensim_model = model.load()
+            compute_sim = True
+            if word1 not in gensim_model.wv.index_to_key:
+                flash("Word '{}' not in the vocabulary of {}".format(word1, model.name))
+                compute_sim = False
+            if word2 not in gensim_model.wv.index_to_key:
+                flash("Word '{}' not in the vocabulary of {}".format(word2, model.name))
+                compute_sim = False
+            if compute_sim:
+                sims[model.name] = cosine_similarity([gensim_model.wv[word1]], [gensim_model.wv[word2]])
+
+    return render_template('models_comparison.html', choose_models_form=choose_models_form, models=models,
+                           words_sim_form=words_sim_form, most_sim_form=most_sim_form, sims=sims)
 
 
 from nlp4all.tasks import addition

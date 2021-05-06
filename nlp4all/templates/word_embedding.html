@@ -2,7 +2,7 @@
 {% block content %}
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <h1>Word embedding analysis tools</h1>
-    <div><a href="{{ url_for('project2') }}?project={{ project }}">Back to project page</a></div>
+    <p><a href="{{ url_for('project2') }}?project={{ project }}">Back to project page</a></p>
     <div class="content-section">
         <h2>Words similarity</h2>
         <form method="POST" action="">
@@ -72,11 +72,11 @@
             </fieldset>
         </form>
         {% if most_sim_words != None %}
-        <div>
+        <ul>
             {% for word in most_sim_words %}
-            <li> <p align="justify">{{ word }} ({{ most_sim_words[word] }})</p> </li>
+                <li> <p align="justify">{{ word }} ({{ most_sim_words[word] }})</p> </li>
             {% endfor %}
-        </div>
+        </ul>
         {% endif %}
     </div>
 
