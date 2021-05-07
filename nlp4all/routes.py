@@ -106,7 +106,7 @@ def project2():
         db.session.commit()
         return(redirect(url_for('project2', project=project_id)))
 
-    if embedding_form.submit_emb and embedding_form.validate_on_submit():
+    if embedding_form.submit_emb.data and embedding_form.validate_on_submit():
         #userid = current_user.id  # useful?
         name = embedding_form.name.data
         description = embedding_form.description.data
@@ -1519,13 +1519,14 @@ def models_comparison():
                                          in Project.query.filter_by(id=project).first().d2v_models]
     words_sim_form = WordSimForm()
     sims = {}
-    most_sim_form = WordMostSimForm()
+    word_most_sim_form = WordMostSimForm()
+    most_sim_words = {}
 
-    if choose_models_form.choose_submit and choose_models_form.validate_on_submit():
+    if choose_models_form.choose_submit.data and choose_models_form.validate_on_submit():
         models = choose_models_form.models.data
-        return redirect(url_for('models_comparison', model=models))
+        return redirect(url_for('models_comparison', project=project, model=models))
 
-    if words_sim_form.word_sim_submit and words_sim_form.validate_on_submit():
+    if words_sim_form.word_sim_submit.data and words_sim_form.validate_on_submit():
         word1 = words_sim_form.word1.data.lower()
         word2 = words_sim_form.word2.data.lower()
         for model in models:
@@ -1540,9 +1541,19 @@ def models_comparison():
             if compute_sim:
                 sims[model.name] = cosine_similarity([gensim_model.wv[word1]], [gensim_model.wv[word2]])
 
+    if word_most_sim_form.word_most_sim_submit.data and word_most_sim_form.validate_on_submit():
+        word = word_most_sim_form.word.data.lower()
+        most_sim_words = {}
+        for db_model in models:
+            model = db_model.load()
+            if word in model.wv.index_to_key:
+                most_sim_words[db_model.name] = model.wv.most_similar(word, topn=1)[0]
+            else:
+                flash("Word '{}' not in the vocabulary of {}".format(word, db_model.name))
+
     return render_template('models_comparison.html', project=project, models=models,
                            choose_models_form=choose_models_form, words_sim_form=words_sim_form,
-                           most_sim_form=most_sim_form, sims=sims)
+                           word_most_sim_form=word_most_sim_form, sims=sims, most_sim_words=most_sim_words)
 
 
 from nlp4all.tasks import addition
