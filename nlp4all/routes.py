@@ -59,7 +59,7 @@ def data_table():
 @login_required
 def add_project():
     #if current_user.role == 'Student':
-    #    flash('You are not allowed to create projects')
+    #    flash('You are not allowed to create projects', 'error')
     #    return redirect(url_for('home'))
     form = AddProjectForm()
     # find forst alle mulige organizations
@@ -132,11 +132,11 @@ def project2():
             d2v.save(gensim_d2v)
             db.session.add(d2v)
             db.session.commit()
-            flash("The model is trained and saved in the database.")
+            flash("The model is trained and saved in the database.", 'success')
             # Redirect to the word embedding page
             return redirect(url_for('word_embedding', model=new_id))
         else:  # w2v only model
-            flash("W2V only models are not implemented yet")
+            flash("W2V only models are not implemented yet", 'error')
             #training_set = [simple_preprocess(tweet.text) for tweet in tweets]
             #gensim_w2v = Word2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
             #
@@ -424,6 +424,7 @@ def register():
         flash('Your account has been created! You are now able to log in', 'success')
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
+
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
@@ -1442,9 +1443,9 @@ def word_embedding():
         word1 = word_sim_form.word1.data.lower()
         word2 = word_sim_form.word2.data.lower()
         if word1 not in model.wv.index_to_key:
-            flash("Word '{}' not in the vocabulary".format(word1))
+            flash("Word '{}' not in the vocabulary".format(word1), 'danger')
         elif word2 not in model.wv.index_to_key:
-            flash("Word '{}' not in the vocabulary".format(word2))
+            flash("Word '{}' not in the vocabulary".format(word2), 'danger')
         else:
             word_sim = cosine_similarity([model.wv[word1]], [model.wv[word2]])
 
@@ -1455,7 +1456,7 @@ def word_embedding():
             for word in most_sim_words.keys():
                 most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
         else:
-            flash("Word '{}' not in the vocabulary".format(word))
+            flash("Word '{}' not in the vocabulary".format(word), 'danger')
 
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
@@ -1476,13 +1477,13 @@ def word_embedding():
             tweets.extend(Tweet.query.filter_by(category=cat).all()[:nb_vecs])
         dv = np.array([model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]).tolist()  # takes too much time
         reduced_dv = reduce_dimension.delay(dv, displayed_cats, reduction_function, n_components, labels, nb_vecs)
-        flash("The dimension reduction is processing")
+        flash("The dimension reduction is processing", 'info')
         return redirect(url_for('word_embedding', model=model_id, task=reduced_dv.id))
 
     if show_form.show.data and show_form.validate_on_submit():
         reduced_dv = AsyncResult(task_id, app=celery_app)
         if reduced_dv.state == 'PENDING':
-            flash("The process is not over yet :/")
+            flash("The process is not over yet :/", 'warning')
         elif reduced_dv.state == 'SUCCESS':
             data_x, data_y, data_z, labels = reduced_dv.get()
             if data_z != []:
@@ -1497,7 +1498,7 @@ def word_embedding():
                                    word_most_sim_form=word_most_sim_form, most_sim_words=most_sim_words,
                                    word_sim_form=word_sim_form, word_sim=word_sim)
         else:
-            flash('Something went wrong somewhere... :(')
+            flash('Something went wrong somewhere... :(', 'error')
 
     show_form_param = show_form if task_id else None
     return render_template("word_embedding.html", title='Word embedding', project=project,
@@ -1533,10 +1534,10 @@ def models_comparison():
             gensim_model = model.load()
             compute_sim = True
             if word1 not in gensim_model.wv.index_to_key:
-                flash("Word '{}' not in the vocabulary of {}".format(word1, model.name))
+                flash("Word '{}' not in the vocabulary of {}".format(word1, model.name), 'warning')
                 compute_sim = False
             if word2 not in gensim_model.wv.index_to_key:
-                flash("Word '{}' not in the vocabulary of {}".format(word2, model.name))
+                flash("Word '{}' not in the vocabulary of {}".format(word2, model.name), 'warning')
                 compute_sim = False
             if compute_sim:
                 sims[model.name] = cosine_similarity([gensim_model.wv[word1]], [gensim_model.wv[word2]])
@@ -1549,7 +1550,7 @@ def models_comparison():
             if word in model.wv.index_to_key:
                 most_sim_words[db_model.name] = model.wv.most_similar(word, topn=1)[0]
             else:
-                flash("Word '{}' not in the vocabulary of {}".format(word, db_model.name))
+                flash("Word '{}' not in the vocabulary of {}".format(word, db_model.name), 'warning')
 
     return render_template('models_comparison.html', project=project, models=models,
                            choose_models_form=choose_models_form, words_sim_form=words_sim_form,
