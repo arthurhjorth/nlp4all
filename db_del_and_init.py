@@ -10,6 +10,7 @@ import json
 import re
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from gensim.utils import simple_preprocess
+from gensim.models.callbacks import CallbackAny2Vec
 
 #import utils  # potentially used, but see if it's unnecessary
 
@@ -44,8 +45,9 @@ user.roles = [student_role,]
 db.session.add(user)
 db.session.commit()
 
-def clean_word(aword): # added
-    if "@" in  aword:
+
+def clean_word(aword):  # added
+    if "@" in aword:
         return "@twitter_ID"
     if "#" in aword:
         return "#hashtag"
@@ -53,25 +55,79 @@ def clean_word(aword): # added
         return "http://link"
     return aword
 
+
 data_dir = 'tweet_data/'
-files = [f for f in os.listdir(data_dir) if '_out.json' in f]
+english_files = [f for f in os.listdir(data_dir) if 'json_out.json' in f]
+danish_data = '/Users/Boulot/nlp4all/tweet_data/Big data/DanishPartyTweets.json'
 
 existing_tag_names = []
-for f in files:
+
+# danish data
+with open(danish_data, 'r') as inf:
+    counter = 0
+    for line in inf.readlines()[::]: # choose how many tweets you want from each party file
+        indict = json.loads(line)
+        indict["created_at"] = indict["created_at"].replace('T', ' ')
+        indict["created_at"] = indict["created_at"][:-5]  # get rid off the .000Z at the end
+        #  add category if it does not already exist
+        if indict['twitter_id'] not in existing_tag_names:
+            category = TweetTagCategory.query.filter_by(name = indict['twitter_id']).first()
+            if not category:
+                category = TweetTagCategory(name=indict['twitter_id'], description="Tweet from " + indict['twitter_id'],
+                                            language='danish')
+                db.session.add(category)
+                db.session.commit()
+                print(category.name)
+            existing_tag_names.append(indict['twitter_id'])
+        category = TweetTagCategory.query.filter_by(name=indict['twitter_id']).first()
+        date_str = indict['created_at']
+        date_rep = '%Y-%m-%d %H:%M:%S'
+        #date_rep = '%a %b %d %H:%M:%S %z %Y'
+        unix_time = time.mktime(datetime.strptime(date_str, date_rep).timetuple())
+        timestamp = datetime.fromtimestamp(unix_time)
+        t = indict['full_text']
+        t.replace(".", " ")
+        t.replace("!", " ")
+        t.replace("?", " ")
+        t.replace(":", " ")
+        t.replace("-", " ")
+        t.replace("-", " ")
+        t.replace(",", " ")
+        t.replace("\(", " ")
+        t.replace("\)", " ")
+        a_tweet = Tweet(
+                time_posted=timestamp,
+                category=category.id,
+                language=category.language,
+                full_text=indict['full_text'],
+                handle=indict['twitter_id'],
+                text=" ".join([clean_word(word) for word in t.split()]),  # changed
+                words=[re.sub(r'[^\w\s]','',w) for w in t.lower().split() if "#" not in w and "http" not in w and "@" not in w],
+                links=[w for w in t.split() if "http" in w],
+                hashtags=[w for w in t.split() if "#" in w],
+                mentions=[w for w in t.split() if "@" in w],
+                url="https://twitter.com/"+indict['twitter_id']+"/"+str(indict['id'])
+                )
+
+        db.session.add(a_tweet)
+
+# english tweets
+for f in english_files:
     with open(data_dir+f) as inf:
         print(f)
         counter = 0
         for line in inf.readlines()[::]: # choose how many tweets you want from each party file
             indict = json.loads(line)
-#             add cateogry if it does not already exist
+            #  add category if it does not already exist
             if indict['twitter_handle'] not in existing_tag_names:
-                category = TweetTagCategory.query.filter_by(name = indict['twitter_handle']).first()
+                category = TweetTagCategory.query.filter_by(name=indict['twitter_handle']).first()
                 if not category:
-                    category = TweetTagCategory(name = indict['twitter_handle'], description = "Tweet from " + indict['twitter_handle'])
+                    category = TweetTagCategory(name=indict['twitter_handle'], description="Tweet from " + indict['twitter_handle'],
+                                                language='english')
                     db.session.add(category)
                     db.session.commit()
                 existing_tag_names.append(indict['twitter_handle'])
-            category = TweetTagCategory.query.filter_by(name = indict['twitter_handle']).first()
+            category = TweetTagCategory.query.filter_by(name=indict['twitter_handle']).first()
             date_str = indict['time']
             date_rep = '%a %b %d %H:%M:%S %z %Y'
             unix_time = time.mktime(datetime.strptime(date_str, date_rep).timetuple())
@@ -89,6 +145,7 @@ for f in files:
             a_tweet = Tweet(
                 time_posted = timestamp,
                 category = category.id,
+                language = category.language,
                 full_text = indict['full_text'],
                 handle = indict['twitter_handle'],
                 text= " ".join([clean_word(word) for word in t.split()]), # changed
@@ -124,10 +181,10 @@ all_words = sorted(list(set([word for t in mytweets for word in t.words])))
 
 for tweet in mytweets:
     tf_idf['cat_counts'][tweet.category] = tf_idf['cat_counts'][tweet.category] + 1
-    for word  in tweet.words:
-            the_list = tf_idf['words'].get(word, [])
-            the_list.append((tweet.id, tweet.category))
-            tf_idf['words'][word] = the_list
+    for word in tweet.words:
+        the_list = tf_idf['words'].get(word, [])
+        the_list.append((tweet.id, tweet.category))
+        tf_idf['words'][word] = the_list
 
 cats_objs = TweetTagCategory.query.filter(TweetTagCategory.id.in_(cat_ids)).all()
 tweet_objs = [t for cat in cats_objs for t in cat.tweets]
@@ -153,11 +210,25 @@ db.session.commit()
 
 ### Doc2Vec
 
+
+class EpochLogger(CallbackAny2Vec):
+    '''Callback to log information about training'''
+
+    def __init__(self):
+        self.epoch = 0
+
+    def on_epoch_begin(self, model):
+        print("Epoch #{} start".format(self.epoch))
+
+    def on_epoch_end(self, model):
+        self.epoch += 1
+
+
 # parameters
 # Arbitrary. Could be changed
-vector_size = 50
-min_count = 2
-epochs = 50
+vector_size = 300
+min_count = 5
+epochs = 300
 
 
 # Initializing the model
@@ -175,11 +246,14 @@ print(train_corpus[1])
 print("Start full model training")
 # Create the vocabulary and train the model
 d2v_model.build_vocab(train_corpus)
-d2v_model.train(train_corpus, total_examples=d2v_model.corpus_count, epochs=d2v_model.epochs)
+epoch_logger = EpochLogger()
+d2v_model.train(train_corpus, total_examples=d2v_model.corpus_count, epochs=d2v_model.epochs,
+                callbacks=[epoch_logger])
 
 
 # save d2v_model into the database
-d2v = D2VModel(id=1, name='Full model', description="Trained on the entire corpus", project=1, public='all')
+d2v = D2VModel(id=1, name='Full model', description="Trained on the entire corpus, dim=300", project=1,
+               public='all')
 d2v.save(d2v_model)
 
 db.session.add(d2v)
@@ -188,11 +262,12 @@ db.session.commit()
 
 ## Adding a danish only model to the db
 
-danish_model = Doc2Vec(vector_size=50, min_count=5, epochs=300)
+danish_model = Doc2Vec(vector_size=vector_size, min_count=min_count, epochs=epochs)
 
 for cat in TweetTagCategory.query.all():
     print(cat.id, cat.name)
-danish_cats_numbers = [1,2,3,4,5,6,8,9,10,11]
+danish_cats_numbers = [cat.id for cat in TweetTagCategory.query.filter_by(language='danish')]
+print(danish_cats_numbers)
 danish_tweets = Tweet.query.filter(Tweet.category.in_(danish_cats_numbers)).all()  # training set. Only danish tweets
 #print(danish_tweets)
 
@@ -202,10 +277,12 @@ for tweet in danish_tweets:
 
 print("Start training danish model")
 danish_model.build_vocab(train_corpus)
-danish_model.train(train_corpus, total_examples=danish_model.corpus_count, epochs=danish_model.epochs)
+epoch_logger = EpochLogger()
+danish_model.train(train_corpus, total_examples=danish_model.corpus_count, epochs=danish_model.epochs,
+                   callbacks=[epoch_logger])
 
 danish_d2v = D2VModel(id=2, name='Danish model', project=1, public='all')
-danish_d2v.save(danish_model, description="Model trained only on danish tweets")
+danish_d2v.save(danish_model, description="Model trained only on danish tweets, dim=300")
 
 db.session.add(danish_d2v)
 db.session.commit()

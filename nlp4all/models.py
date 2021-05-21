@@ -379,6 +379,7 @@ class TweetTagCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50))
     description = db.Column(db.String(100))
+    language = db.Column(db.String(20))
     tweets = db.relationship('Tweet')
     tags = db.relationship('TweetTag')
     projects = db.relationship('Project', secondary='project_categories')
@@ -388,6 +389,7 @@ class Tweet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     time_posted = db.Column(db.DateTime)
     category = db.Column(db.Integer, db.ForeignKey('tweet_tag_category.id'))
+    language = db.Column(db.String(20))
     projects = db.Column(db.Integer, db.ForeignKey('project.id'))
     handle = db.Column(db.String(15))
     full_text = db.Column(db.String(280))
@@ -500,13 +502,13 @@ class ConfusionMatrix(db.Model):
     user = db.Column(db.Integer, db.ForeignKey('user.id'))
     categories = db.relationship('TweetTagCategory', secondary='confusionmatrix_categories')
     tweets = db.relationship('Tweet', secondary='tweet_confusionmatrix')
-    matrix_data = db.Column(JSON) # here to save the TP/TN/FP/FN
-    train_data = db.Column(JSON) # word counts from the training set
+    matrix_data = db.Column(JSON)  # here to save the TP/TN/FP/FN
+    train_data = db.Column(JSON)  # word counts from the training set
     tf_idf = db.Column(JSON)
     training_and_test_sets = db.Column(JSON)
     threshold = db.Column(db.Float())
     ratio = db.Column(db.Float())
-    data = db.Column(JSON) # accuracy etc resuts from the matrix
+    data = db.Column(JSON)  # accuracy etc results from the matrix
     parent = db.Column(db.Integer, db.ForeignKey('confusion_matrix.id'), default=None) # for cloning purposes
     child = db.Column(db.Integer, db.ForeignKey('confusion_matrix.id'), default=None)
     
