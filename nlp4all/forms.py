@@ -203,3 +203,9 @@ class WordSimForm(FlaskForm):
 class ChooseModelsForm(FlaskForm):
     models = SelectMultipleField('List of available models', validators=[DataRequired()])
     choose_submit = SubmitField('Select models')
+
+
+class SubmitTweetForm(FlaskForm):
+    text = StringField('Write your tweet', validators=[DataRequired()])
+    topn = IntegerField('Number of displayed tweets')
+    tweet_submit = SubmitField('Find the closest tweets')

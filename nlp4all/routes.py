@@ -13,7 +13,7 @@ from flask_mail import Message
 import datetime
 import json, ast
 from sqlalchemy.orm.attributes import flag_modified
-from nlp4all.utils import get_user_projects, get_user_project_analyses
+from nlp4all.utils import get_user_projects, get_user_project_analyses, get_closest_tweets
 from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat
 import operator
 import re
@@ -1438,6 +1438,8 @@ def word_embedding():
     most_sim_words = None
     word_sim_form = WordSimForm()
     word_sim = None
+    submit_tweet_form = SubmitTweetForm(topn=5)
+    closest_tweets = None
 
     if word_sim_form.word_sim_submit.data and word_sim_form.validate_on_submit():
         word1 = word_sim_form.word1.data.lower()
@@ -1457,6 +1459,15 @@ def word_embedding():
                 most_sim_words[word] = "{:.3f}".format(most_sim_words[word])
         else:
             flash("Word '{}' not in the vocabulary".format(word), 'danger')
+
+    if submit_tweet_form.tweet_submit.data and submit_tweet_form.validate_on_submit():
+        tweet_text = submit_tweet_form.text.data
+        closest_tweets_id = get_closest_tweets(tweet_text, model, topn=submit_tweet_form.topn.data)
+        closest_tweets = []
+        for tweet_id, tweet_sim in closest_tweets_id:
+            tweet = Tweet.query.filter_by(id=tweet_id).first()
+            cat_name = TweetTagCategory.query.filter_by(id=tweet.category).first().name
+            closest_tweets.append((tweet.text, cat_name, tweet_sim))
 
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
@@ -1491,12 +1502,15 @@ def word_embedding():
                                        db_model=db_model, display_form=display_form,
                                        show_form=show_form, data_x=data_x, data_y=data_y, data_z=data_z,
                                        labels=json.dumps(labels), word_most_sim_form=word_most_sim_form,
-                                       most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
+                                       most_sim_words=most_sim_words, word_sim_form=word_sim_form,
+                                       word_sim=word_sim, submit_tweet_form=submit_tweet_form,
+                                       closest_tweets=closest_tweets)
             return render_template("word_embedding.html", title='Display vectors', project=project,
                                    db_model=db_model, display_form=display_form,
                                    show_form=show_form, data_x=data_x, data_y=data_y,labels=json.dumps(labels),
                                    word_most_sim_form=word_most_sim_form, most_sim_words=most_sim_words,
-                                   word_sim_form=word_sim_form, word_sim=word_sim)
+                                   word_sim_form=word_sim_form, word_sim=word_sim, submit_tweet_form=submit_tweet_form,
+                                   closest_tweets=closest_tweets)
         else:
             flash('Something went wrong somewhere... :(', 'error')
 
@@ -1504,7 +1518,8 @@ def word_embedding():
     return render_template("word_embedding.html", title='Word embedding', project=project,
                            db_model=db_model, display_form=display_form,
                            show_form=show_form_param, word_most_sim_form=word_most_sim_form,
-                           most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim)
+                           most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim,
+                           submit_tweet_form=submit_tweet_form, closest_tweets=closest_tweets)
 
 
 @app.route('/models_comparison', methods=['GET', 'POST'])

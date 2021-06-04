@@ -8,6 +8,7 @@ import operator
 from nlp4all import db
 import random, itertools
 from nlp4all.models import BayesianAnalysis, BayesianRobot
+from gensim.utils import simple_preprocess
 
 
 def generate_n_hsl_colors(no_colors, transparency=1, offset=0):
@@ -365,3 +366,35 @@ def matrix_css_info(index_list):
         tups.append(i)
     return(tups)
 
+
+def get_closest_tweets(tweet_text, model, topn=5):
+    # preprocess the text
+    tweet_text = simple_preprocess(tweet_text)
+    tweet_vec = model.infer_vector(tweet_text)
+    closer_tweets = model.dv.most_similar([tweet_vec], topn=topn)
+    return closer_tweets
+
+
+"""from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import confusion_matrix, accuracy_score
+def get_w2v_confusion_matrix(model, cats, n_max):
+    tweets = []
+    for cat in cats:
+        tweets.extend(Tweet.query.filter_by(category=cat).all()[:n_max])
+    tweets_ids = [tweet.id for tweet in tweets]
+    X = [model.dv[i] for i in tweets_ids]
+    labels = [tweet.category for tweet in tweets]
+
+    ANN = MLPClassifier(hidden_layer_sizes=[50,50], max_iter=2000,
+                        activation='relu')
+    X_train, X_test, y_train, y_test = train_test_split(X, labels, train_size=0.5)
+    ANN.fit(X_train, y_train)
+    y_train_pred = ANN.predict(X_train)
+    y_test_pred = ANN.predict(X_test)
+    #plt.plot(ANN.loss_curve_)
+    #plt.show()
+    train_accuracy = accuracy_score(y_train, y_train_pred)
+    train_matrix = confusion_matrix(y_train, y_train_pred)
+    test_accuracy = accuracy_score(y_test, y_test_pred)
+    test_matrix = confusion_matrix(y_test, y_test_pred)"""
