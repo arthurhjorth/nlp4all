@@ -228,7 +228,7 @@ class EpochLogger(CallbackAny2Vec):
 # Arbitrary. Could be changed
 vector_size = 300
 min_count = 5
-epochs = 300
+epochs = 100
 
 
 # Initializing the model
@@ -282,7 +282,7 @@ danish_model.train(train_corpus, total_examples=danish_model.corpus_count, epoch
                    callbacks=[epoch_logger])
 
 danish_d2v = D2VModel(id=2, name='Danish model', project=1, public='all')
-danish_d2v.save(danish_model, description="Model trained only on danish tweets, dim=300")
+danish_d2v.save(danish_model, description="Model trained only on "+cat.name+" tweets, dim=300")
 
 db.session.add(danish_d2v)
 db.session.commit()
@@ -290,6 +290,28 @@ db.session.commit()
 print("full model project", d2v.project)
 print("danish model project", danish_d2v.project)
 print("gensim models of project1", Project.query.first().d2v_models)
+
+
+## Create one model per party/cat
+
+for cat in TweetTagCategory.query.all():
+    gensim_model = Doc2Vec(vector_size=vector_size, min_count=min_count, epochs=epochs)
+    tweets = Tweet.query.filter_by(category=cat.id).all()
+    train_corpus = []
+    for tweet in tweets:
+        train_corpus.append(TaggedDocument(simple_preprocess(tweet.text), [tweet.id]))
+
+    print("Start training "+cat.name+" model")
+    gensim_model.build_vocab(train_corpus)
+    epoch_logger = EpochLogger()
+    gensim_model.train(train_corpus, total_examples=gensim_model.corpus_count, epochs=gensim_model.epochs,
+                       callbacks=[epoch_logger])
+
+    db_d2v = D2VModel(name=cat.name+' model', project=1, public='all')
+    db_d2v.save(gensim_model, description="Model trained only on danish tweets, dim=300")
+
+    db.session.add(db_d2v)
+    db.session.commit()
 
 
 ## tests
