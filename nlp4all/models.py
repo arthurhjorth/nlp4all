@@ -657,17 +657,30 @@ class D2VModel(db.Model):
     name = db.Column(db.String(20))
     description = db.Column(db.String(50))
     project = db.Column(db.Integer, db.ForeignKey("project.id"))
-    model = db.Column(db.PickleType)
     public = db.Column(db.String)
+    model = db.Column(db.Integer, db.ForeignKey("d2_v_model_backend.id"))
 
     def save(self, gensim_model, description=None):
-        # /!\ Erases an possible already saved model
+        # /!\ Erases a possible already saved model
         pickled_model = pickle.dumps(gensim_model)
+        if self.model:
+            model = D2VModelBackend.query.filetr_by(id=self.model).first()
+        else:
+            model = D2VModelBackend()
+            db.session.add(model)
+            db.session.commit()
+            self.model = model.id
         if description:
             self.description = description
-        self.model = pickled_model
+        model.model = pickled_model
 
     def load(self, verbose=False):
         if verbose:
             print(self.description)
-        return pickle.loads(self.model)
+        pickled_model = D2VModelBackend.query.filter_by(id=self.model).first().model
+        return pickle.loads(pickled_model)
+
+
+class D2VModelBackend(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    model = db.Column(db.PickleType)
