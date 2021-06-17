@@ -282,7 +282,7 @@ danish_model.train(train_corpus, total_examples=danish_model.corpus_count, epoch
                    callbacks=[epoch_logger])
 
 danish_d2v = D2VModel(id=2, name='Danish model', project=1, public='all')
-danish_d2v.save(danish_model, description="Model trained only on "+cat.name+" tweets, dim=300")
+danish_d2v.save(danish_model, description="Model trained only on danish tweets, dim=300")
 
 db.session.add(danish_d2v)
 db.session.commit()
@@ -308,7 +308,7 @@ for cat in TweetTagCategory.query.all():
                        callbacks=[epoch_logger])
 
     db_d2v = D2VModel(name=cat.name+' model', project=1, public='all')
-    db_d2v.save(gensim_model, description="Model trained only on danish tweets, dim=300")
+    db_d2v.save(gensim_model, description="Model trained only on "+cat.name+" tweets, dim=300")
 
     db.session.add(db_d2v)
     db.session.commit()

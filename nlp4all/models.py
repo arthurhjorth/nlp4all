@@ -664,7 +664,7 @@ class D2VModel(db.Model):
         # /!\ Erases a possible already saved model
         pickled_model = pickle.dumps(gensim_model)
         if self.model:
-            model = D2VModelBackend.query.filetr_by(id=self.model).first()
+            model = D2VModelBackend.query.filter_by(id=self.model).first()
         else:
             model = D2VModelBackend()
             db.session.add(model)
