@@ -252,8 +252,8 @@ d2v_model.train(train_corpus, total_examples=d2v_model.corpus_count, epochs=d2v_
 
 
 # save d2v_model into the database
-d2v = D2VModel(id=1, name='Full model', description="Trained on the entire corpus, dim=300", project=1,
-               public='all')
+d2v = D2VModel(id=1, name='Full model', dim=vector_size, description="Trained on the entire corpus, dim=300",
+               project=1, public='all')
 d2v.save(d2v_model)
 
 db.session.add(d2v)
@@ -281,7 +281,7 @@ epoch_logger = EpochLogger()
 danish_model.train(train_corpus, total_examples=danish_model.corpus_count, epochs=danish_model.epochs,
                    callbacks=[epoch_logger])
 
-danish_d2v = D2VModel(id=2, name='Danish model', project=1, public='all')
+danish_d2v = D2VModel(id=2, name='Danish model', dim=vector_size, project=1, public='all')
 danish_d2v.save(danish_model, description="Model trained only on danish tweets, dim=300")
 
 db.session.add(danish_d2v)
@@ -307,7 +307,7 @@ for cat in TweetTagCategory.query.all():
     gensim_model.train(train_corpus, total_examples=gensim_model.corpus_count, epochs=gensim_model.epochs,
                        callbacks=[epoch_logger])
 
-    db_d2v = D2VModel(name=cat.name+' model', project=1, public='all')
+    db_d2v = D2VModel(name=cat.name+' model', dim=vector_size, project=1, public='all')
     db_d2v.save(gensim_model, description="Model trained only on "+cat.name+" tweets, dim=300")
 
     db.session.add(db_d2v)

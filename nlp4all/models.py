@@ -7,6 +7,7 @@ import collections
 import collections, functools, operator 
 import statistics
 import pickle
+import numpy as np
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -655,6 +656,7 @@ class TweetAnnotation(db.Model):
 class D2VModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20))
+    dim = db.Column(db.Integer)
     description = db.Column(db.String(50))
     project = db.Column(db.Integer, db.ForeignKey("project.id"))
     public = db.Column(db.String)
@@ -679,6 +681,28 @@ class D2VModel(db.Model):
             print(self.description)
         pickled_model = D2VModelBackend.query.filter_by(id=self.model).first().model
         return pickle.loads(pickled_model)
+
+    def get_wv_stats(self, n=1000):
+        gensim_model = self.load()
+        n = min(n, len(gensim_model.wv))
+        words = np.random.choice(gensim_model.wv.index_to_key, n)
+        word_vecs = [gensim_model.wv[word] for word in words]
+        sims = []
+        for i,word in enumerate(word_vecs):
+            print(i)
+            sims.extend(gensim_model.wv.cosine_similarities(word, word_vecs))
+        return np.mean(sims), np.std(sims)
+
+    def get_dv_stats(self, n=1000):
+        gensim_model = self.load()
+        n = min(n, len(gensim_model.dv))
+        docs = np.random.choice(gensim_model.dv.index_to_key, n)
+        doc_vecs = [gensim_model.dv[doc] for doc in docs]
+        sims = []
+        for i,doc in enumerate(doc_vecs):
+            print(i)
+            sims.extend(gensim_model.dv.cosine_similarities(doc, doc_vecs))
+        return np.mean(sims), np.std(sims)
 
 
 class D2VModelBackend(db.Model):
