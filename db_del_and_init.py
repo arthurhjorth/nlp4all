@@ -240,7 +240,7 @@ tweets = Tweet.query.all()
 
 train_corpus = []
 for tweet in tweets:
-    train_corpus.append(TaggedDocument(simple_preprocess(tweet.text), [tweet.id]))
+    train_corpus.append(TaggedDocument(simple_preprocess(tweet.full_text), [tweet.id]))
 print(train_corpus[1])
 
 print("Start full model training")
@@ -273,7 +273,7 @@ danish_tweets = Tweet.query.filter(Tweet.category.in_(danish_cats_numbers)).all(
 
 train_corpus = []
 for tweet in danish_tweets:
-    train_corpus.append(TaggedDocument(simple_preprocess(tweet.text), [tweet.id]))
+    train_corpus.append(TaggedDocument(simple_preprocess(tweet.full_text), [tweet.id]))
 
 print("Start training danish model")
 danish_model.build_vocab(train_corpus)
@@ -299,7 +299,7 @@ for cat in TweetTagCategory.query.all():
     tweets = Tweet.query.filter_by(category=cat.id).all()
     train_corpus = []
     for tweet in tweets:
-        train_corpus.append(TaggedDocument(simple_preprocess(tweet.text), [tweet.id]))
+        train_corpus.append(TaggedDocument(simple_preprocess(tweet.full_text), [tweet.id]))
 
     print("Start training "+cat.name+" model")
     gensim_model.build_vocab(train_corpus)

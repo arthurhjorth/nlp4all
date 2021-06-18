@@ -121,7 +121,7 @@ def project2():
         tweets = Tweet.query.filter(Tweet.category.in_(training_cats)).all()
         if embedding_form.d2v.data:  # d2v model
             # should be done in the background
-            training_set = [TaggedDocument(simple_preprocess(tweet.text), [tweet.id]) for tweet in tweets]
+            training_set = [TaggedDocument(simple_preprocess(tweet.full_text), [tweet.id]) for tweet in tweets]
             cores = multiprocessing.cpu_count()
             gensim_d2v = Doc2Vec(vector_size=vector_size, min_count=5, epochs=epochs, workers=cores-1)
             gensim_d2v.build_vocab(training_set)
@@ -138,7 +138,7 @@ def project2():
             return redirect(url_for('word_embedding', model=new_id))
         else:  # w2v only model
             flash("W2V only models are not implemented yet", 'error')
-            #training_set = [simple_preprocess(tweet.text) for tweet in tweets]
+            #training_set = [simple_preprocess(tweet.full_text) for tweet in tweets]
             #gensim_w2v = Word2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
             #
         #return(redirect(url_for('project2', project=project_id)))
@@ -1387,7 +1387,7 @@ def scatter_plot_2D():
     labels = [TweetTagCategory.query.filter_by(id=cats[i]).first().name for i in range(len(cats))]
     tsne = TSNE(n_components=2)
     tweets = Tweet.query.filter(Tweet.category.in_(cats)).all()
-    dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]
+    dv = [model.infer_vector(simple_preprocess(tweet.full_text)) for tweet in tweets]
     reduced_dv = tsne.fit_transform(dv)
     separated_docvecs = separate_by_cat(reduced_dv, cats)
     for cat_vecs in separated_docvecs:
@@ -1409,7 +1409,7 @@ def scatter_plot_3D():
     pca = PCA(n_components=3)
     for cat_id in cats:
         tweets = Tweet.query.filter_by(category=cat_id).all()
-        dv = [model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]  # doc vecs of 1 cat
+        dv = [model.infer_vector(simple_preprocess(tweet.full_text)) for tweet in tweets]  # doc vecs of 1 cat
         pca.fit(dv)
         docvecs.append(dv)
     for dv in docvecs:
@@ -1487,7 +1487,7 @@ def word_embedding():
         tweets = []
         for cat in displayed_cats:
             tweets.extend(Tweet.query.filter_by(category=cat).all()[:nb_vecs])
-        dv = np.array([model.infer_vector(simple_preprocess(tweet.text)) for tweet in tweets]).tolist()  # takes too much time
+        dv = np.array([model.infer_vector(simple_preprocess(tweet.full_text)) for tweet in tweets]).tolist()  # takes too much time
         reduced_dv = reduce_dimension.delay(dv, displayed_cats, reduction_function, n_components, labels, nb_vecs)
         flash("The dimension reduction is processing", 'info')
         return redirect(url_for('word_embedding', model=model_id, task=reduced_dv.id))
