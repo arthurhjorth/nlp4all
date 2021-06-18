@@ -689,7 +689,6 @@ class D2VModel(db.Model):
         word_vecs = [gensim_model.wv[word] for word in words]
         sims = []
         for i,word in enumerate(word_vecs):
-            print(i)
             sims.extend(gensim_model.wv.cosine_similarities(word, word_vecs))
         return np.mean(sims), np.std(sims)
 
@@ -700,7 +699,6 @@ class D2VModel(db.Model):
         doc_vecs = [gensim_model.dv[doc] for doc in docs]
         sims = []
         for i,doc in enumerate(doc_vecs):
-            print(i)
             sims.extend(gensim_model.dv.cosine_similarities(doc, doc_vecs))
         return np.mean(sims), np.std(sims)
 

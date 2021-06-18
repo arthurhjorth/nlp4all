@@ -128,7 +128,8 @@ def project2():
             train_d2v(pickle.dumps(gensim_d2v), training_set)  # add .delay to compute it with celery
             # save the model to the db
             new_id = max([model.id for model in D2VModel.query.all()]) + 1
-            d2v = D2VModel(id=new_id, name=name, description=description, project=project_id, public=public)
+            d2v = D2VModel(id=new_id, name=name, description=description, dim=vector_size,
+                           project=project_id, public=public)
             d2v.save(gensim_d2v)
             db.session.add(d2v)
             db.session.commit()
@@ -1467,7 +1468,7 @@ def word_embedding():
         for tweet_id, tweet_sim in closest_tweets_id:
             tweet = Tweet.query.filter_by(id=tweet_id).first()
             cat_name = TweetTagCategory.query.filter_by(id=tweet.category).first().name
-            closest_tweets.append((tweet.text, cat_name, tweet_sim))
+            closest_tweets.append((tweet.full_text, cat_name, tweet_sim))
 
     if display_form.submit_display.data and display_form.validate_on_submit():
         displayed_cats = display_form.displayed_set.data
