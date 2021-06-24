@@ -34,7 +34,8 @@ from celery.result import AsyncResult
 @login_required
 def home():
     my_projects = get_user_projects(current_user)
-    analyses = D2VModel.query.filter_by(public='all').all()
+    page = request.args.get('page', 1, type=int)
+    analyses = D2VModel.query.filter_by(public='all').paginate(page, app.config['MODEL_PER_PAGE'], False).items
     #create_project = None
     #if current_user.roles in ['Teacher', 'Admin']:
     create_project = url_for('add_project')
@@ -74,6 +75,12 @@ def add_project():
         project_id = project.id
         return(redirect(url_for('home', project=project_id)))
     return render_template('add_project.html', title='Add New Project', form=form)
+
+
+@app.route("/public_models", methods=['GET'])
+def public_models():
+
+    return render_template('layout.html')
 
 
 @app.route("/project2", methods=['GET', "POST"])
