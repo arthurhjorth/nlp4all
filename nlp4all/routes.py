@@ -79,8 +79,13 @@ def add_project():
 
 @app.route("/public_models", methods=['GET'])
 def public_models():
-
-    return render_template('layout.html')
+    page = request.args.get('page', 1, type=int)
+    public_models = D2VModel.query.filter_by(public='all').paginate(page, 10, False)
+    next_url = url_for('public_models', page=public_models.next_num) \
+        if public_models.has_next else None
+    prev_url = url_for('public_models', page=public_models.prev_num) \
+        if public_models.has_prev else None
+    return render_template('model_list.html', models=public_models.items, next_url=next_url, prev_url=prev_url)
 
 
 @app.route("/project2", methods=['GET', "POST"])
