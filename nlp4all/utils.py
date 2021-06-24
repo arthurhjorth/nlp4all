@@ -9,6 +9,7 @@ from nlp4all import db
 import random, itertools
 from nlp4all.models import BayesianAnalysis, BayesianRobot
 from gensim.utils import simple_preprocess
+from sqlalchemy.orm import load_only
 
 
 def generate_n_hsl_colors(no_colors, transparency=1, offset=0):
@@ -146,16 +147,15 @@ def get_user_project_analyses(a_user, a_project):
         #         return [a for a in all_project_analyses if a.shared or a.user == a_user.id]
 
 
-def  get_user_projects(a_user):
-        # people have access to projects iif they are part of the organizatioin of those 
-        # projects, or  because the user is an admiin
-        my_projects = []
-        if a_user.admin:
-                my_projects = Project.query.all()
-        else:
-                user_orgs = [org.id for org in a_user.organizations]
-                my_projects = Project.query.filter(Project.organization.in_(user_orgs)).all()
-        return(my_projects)
+def get_user_projects(a_user, attr_to_load=None):
+    # people have access to projects iif they are part of the organization of those
+    # projects, or  because the user is an admin
+    if a_user.admin:
+        my_projects = Project.query.options(load_only(*attr_to_load)).all()
+    else:
+        user_orgs = [org.id for org in a_user.organizations]
+        my_projects = Project.query.options(load_only(*attr_to_load)).filter(Project.organization.in_(user_orgs)).all()
+    return my_projects
 
 def add_project(name, description, org, cat_ids):
         print(description)

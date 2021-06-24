@@ -33,7 +33,7 @@ from celery.result import AsyncResult
 @app.route("/home/", methods=['GET', 'POST'])
 @login_required
 def home():
-    my_projects = get_user_projects(current_user)
+    my_projects = get_user_projects(current_user, attr_to_load=['id', 'name', 'description'])
     page = request.args.get('page', 1, type=int)
     analyses = D2VModel.query.filter_by(public='all').paginate(page, app.config['MODEL_PER_PAGE'], False).items
     #create_project = None
