@@ -21,6 +21,7 @@
                 <p>{{ d2v.description }}</p>
             {% endfor %}
         </div>
+        <p><a href="{{ url_for('project2_d2v_models', project=project.id) }}">See all the project's Doc2Vec models</a></p>
         <p><a href="{{ url_for('models_comparison', project=project.id) }}">Compare word embedding models</a></p>
     {% endif %}
 </div>

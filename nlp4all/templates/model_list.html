@@ -2,19 +2,26 @@
 {% block content %}
 
 <div class="content-section">
-    <h2>Public models</h2>
+    <h2>{{ title }}</h2>
     <p class="border-bottom mb-4"></p>
     {% for model in models %}
         <a class="nav-item nav-link" href="{{ url_for('word_embedding') }}?model={{ model.id }}">{{ model.name }}</a>
         <p>{{ model.description }} </p>
     {% endfor %}
-    <p class="border-top mb-4"></p>
-    {% if prev_url %}
-        <a class="nav-item nav-link" href="{{ prev_url }}">Previous page</a>
-    {% endif %}
-    {% if next_url %}
-        <a class="nav-item nav-link" href="{{ next_url }}">Next page</a>
-    {% endif %}
+    <nav aria-label="...">
+        <ul class="pager">
+            <p class="previous{% if not prev_url %} disabled{% endif %}">
+                <a href="{{ prev_url or '#' }}">
+                    <span aria-hidden="false">&larr;</span> Previous page
+                </a>
+            </p>
+            <p class="next{% if not prev_url %} disabled{% endif %}">
+                <a href="{{ next_url or '#' }}">
+                    Next page <span aria-hidden="true">&rarr;</span>
+                </a>
+            </p>
+        </ul>
+    </nav>
 </div>
 
 {% endblock content %}

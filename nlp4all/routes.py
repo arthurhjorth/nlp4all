@@ -1567,8 +1567,8 @@ def models_comparison():
     models = D2VModel.query.filter(D2VModel.id.in_(models_id)).all()
     # define forms and variables
     choose_models_form = ChooseModelsForm()
-    choose_models_form.models.choices = [(str(model.id), model.name) for model
-                                         in Project.query.filter_by(id=project).first().d2v_models]
+    choose_models_form.models.choices = [(str(model.id), model.name) for model in
+                                         D2VModel.query.options(load_only('name')).filter_by(project=project).all()]
     words_sim_form = WordSimForm()
     sims = {}
     word_most_sim_form = WordMostSimForm()
