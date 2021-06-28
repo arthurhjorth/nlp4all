@@ -13,6 +13,7 @@ from flask_mail import Message
 import datetime
 import json, ast
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm import load_only
 from nlp4all.utils import get_user_projects, get_user_project_analyses, get_closest_tweets
 from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat
 import operator
@@ -35,11 +36,12 @@ from celery.result import AsyncResult
 def home():
     my_projects = get_user_projects(current_user, attr_to_load=['id', 'name', 'description'])
     page = request.args.get('page', 1, type=int)
-    analyses = D2VModel.query.filter_by(public='all').paginate(page, app.config['MODEL_PER_PAGE'], False).items
+    analyses = D2VModel.query.options(load_only('id', 'name', 'description', 'public')).filter_by(public='all')\
+               .paginate(page, app.config['MODELS_PER_PAGE'], False)
     #create_project = None
     #if current_user.roles in ['Teacher', 'Admin']:
     create_project = url_for('add_project')
-    return render_template('home.html', projects=my_projects, analyses=analyses, create_project=create_project)
+    return render_template('home.html', projects=my_projects, analyses=analyses.items, create_project=create_project)
 
 @app.route("/robot_summary", methods=['GET', 'POST'])
 def robot_summary():
@@ -80,12 +82,14 @@ def add_project():
 @app.route("/public_models", methods=['GET'])
 def public_models():
     page = request.args.get('page', 1, type=int)
-    public_models = D2VModel.query.filter_by(public='all').paginate(page, 10, False)
+    public_models = D2VModel.query.options(load_only('id', 'name', 'description', 'public'))\
+                    .filter_by(public='all').paginate(page, 10, False)
     next_url = url_for('public_models', page=public_models.next_num) \
         if public_models.has_next else None
     prev_url = url_for('public_models', page=public_models.prev_num) \
         if public_models.has_prev else None
-    return render_template('model_list.html', models=public_models.items, next_url=next_url, prev_url=prev_url)
+    return render_template('model_list.html', title="Public models", models=public_models.items, next_url=next_url,
+                           prev_url=prev_url)
 
 
 @app.route("/project2", methods=['GET', "POST"])
@@ -94,7 +98,10 @@ def project2():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
     analyses = project.analyses if (project and project.analyses) else []
-    d2v_models = project.d2v_models if (project and project.d2v_models) else []
+    page = request.args.get('page', 1, type=int)
+    d2v_models = D2VModel.query.options(load_only('id', 'name', 'description')).filter_by(project=project_id)\
+                 .paginate(page, app.config['MODELS_PER_PAGE'], False).items
+    #d2v_models = project.d2v_models[:app.config['MODELS_PER_PAGE']] if (project and project.d2v_models) else []
     bayesian_form = AddBayesianAnalysisForm()
     embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
     embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in project.categories]
@@ -157,6 +164,22 @@ def project2():
 
     return render_template('project2.html', title='Project', project=project, analyses=analyses, d2v_models=d2v_models,
                            bayesian_form=bayesian_form, embedding_form=embedding_form)
+
+
+@app.route("/project2/d2v_models", methods=['GET'])
+@login_required
+def project2_d2v_models():
+    project_id = request.args.get('project', None, type=int)
+    project = Project.query.options(load_only('id', 'name')).get(project_id)
+    page = request.args.get('page', 1, type=int)
+    project_models = D2VModel.query.options(load_only('id', 'name', 'description'))\
+                     .filter_by(project=project_id).paginate(page, 10, False)
+    next_url = url_for('project2_d2v_models', project=project_id, page=project_models.next_num) \
+        if project_models.has_next else None
+    prev_url = url_for('project2_d2v_models', project=project_id, page=project_models.prev_num) \
+        if project_models.has_prev else None
+    return render_template('model_list.html', title=project.name+" models", models=project_models.items,
+                           next_url=next_url, prev_url=prev_url)
 
 
 @app.route("/project", methods=['GET', "POST"])
@@ -1593,3 +1616,9 @@ def test_html():
     add = addition.delay(a, b)
     form = ShowForm()
     return render_template('html_de_ses_morts.html', add=add, form=form)
+
+
+@app.route('/bootstrap_layout')
+def bootstrap_layout():
+
+    return render_template('bootstrap_layout.html')
