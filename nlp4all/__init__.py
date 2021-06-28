@@ -20,8 +20,8 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('EMAIL_USER')
 app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASS')
 mail = Mail(app)
+app.config['MODELS_PER_PAGE'] = 6
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['MODEL_PER_PAGE'] = 6
 app.result_backend = 'redis://localhost:6379/0'
 celery_app = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.result_backend)
 celery_app.conf.update(app.config)
