@@ -92,12 +92,14 @@ def public_models():
                            prev_url=prev_url)
 
 
-@app.route("/project2", methods=['GET', "POST"])
+@app.route("/project", methods=['GET', "POST"])
 @login_required
-def project2():
+def project():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
-    analyses = project.analyses if (project and project.analyses) else []
+    bay_page = request.args.get('bay_page', 1, type=int)
+    analyses = BayesianAnalysis.query.options(load_only('id', 'name')).filter_by(project=project_id)\
+               .paginate(bay_page, app.config['MODELS_PER_PAGE'], False).items
     page = request.args.get('page', 1, type=int)
     d2v_models = D2VModel.query.options(load_only('id', 'name', 'description')).filter_by(project=project_id)\
                  .paginate(page, app.config['MODELS_PER_PAGE'], False).items
@@ -123,7 +125,7 @@ def project2():
                                     annotate=bayesian_form.annotate.data )
         db.session.add(analysis)
         db.session.commit()
-        return(redirect(url_for('project2', project=project_id)))
+        return(redirect(url_for('project', project=project_id)))
 
     if embedding_form.submit_emb.data and embedding_form.validate_on_submit():
         #userid = current_user.id  # useful?
@@ -160,30 +162,30 @@ def project2():
             #training_set = [simple_preprocess(tweet.full_text) for tweet in tweets]
             #gensim_w2v = Word2Vec(vector_size=vector_size, min_count=5, epochs=epochs)
             #
-        #return(redirect(url_for('project2', project=project_id)))
+        #return(redirect(url_for('project', project=project_id)))
 
-    return render_template('project2.html', title='Project', project=project, analyses=analyses, d2v_models=d2v_models,
-                           bayesian_form=bayesian_form, embedding_form=embedding_form)
+    return render_template('project.html', title='Project', project=project, analyses=analyses,
+                           d2v_models=d2v_models, bayesian_form=bayesian_form, embedding_form=embedding_form)
 
 
-@app.route("/project2/d2v_models", methods=['GET'])
+@app.route("/project/d2v_models", methods=['GET'])
 @login_required
-def project2_d2v_models():
+def project_d2v_models():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.options(load_only('id', 'name')).get(project_id)
     page = request.args.get('page', 1, type=int)
     project_models = D2VModel.query.options(load_only('id', 'name', 'description'))\
                      .filter_by(project=project_id).paginate(page, 10, False)
-    next_url = url_for('project2_d2v_models', project=project_id, page=project_models.next_num) \
+    next_url = url_for('project_d2v_models', project=project_id, page=project_models.next_num) \
         if project_models.has_next else None
-    prev_url = url_for('project2_d2v_models', project=project_id, page=project_models.prev_num) \
+    prev_url = url_for('project_d2v_models', project=project_id, page=project_models.prev_num) \
         if project_models.has_prev else None
     return render_template('model_list.html', title=project.name+" models", models=project_models.items,
                            next_url=next_url, prev_url=prev_url)
 
 
-@app.route("/project", methods=['GET', "POST"])
-def project():
+@app.route("/project_deprecated", methods=['GET', "POST"])
+def project_deprecated():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
     form = AddBayesianAnalysisForm()
