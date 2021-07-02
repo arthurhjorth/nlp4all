@@ -8,7 +8,7 @@
         <h2>My Projects</h2>
         <p class="border-bottom mb-4"></p>
         {% for p in projects %}
-            <a class="nav-item nav-link" href="{{ url_for('project2') }}?project={{ p.id }}">{{ p.name }}</a>
+            <a class="nav-item nav-link" href="{{ url_for('project') }}?project={{ p.id }}">{{ p.name }}</a>
             <p>{{ p.description }} </p>
         {% endfor %}
         <p>

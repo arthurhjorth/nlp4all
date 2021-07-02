@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h1>Project Title: {{ project.name }} </h1>
+<br>
+<div class="content-section">
+<h2>My analyses on project {{ project.name }} </h2>
+{% for a in analyses %}
+
+<div class="content-section">
+<a class="nav-item nav-link" href="{{ url_for('analysis') }}?analysis={{a.id}}">{{a.name}}</a>
+</div>
+{% endfor %}
+</div>
+{% for p in projects %}
+<a class="nav-item nav-link" href="{{ url_for('project') }}?project={{ p.id }}">p.name</a>
+{% endfor %}
+<div class="content-section">
+<h2>Create New Analysis</h2>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <div class="form-group">
+                {{ form.name.label(class="form-control-label") }}
+                {% if form.name.errors %}
+                    {{ form.name(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.name.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.name(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+
+                <div class="form-check">
+                    {{ form.shared(class="form-check-input") }}
+                    {{ form.shared.label(class="form-check-label") }}
+                </div>
+                <div class="form-check">
+                    {{ form.annotate(class="form-check-input") }}
+                    {{ form.annotate.label(class="form-check-label") }}
+                </div>
+            <div class="form-group">
+                {{ form.number.label(class="form-control-label") }}
+                {% if form.number.errors %}
+                    {{ form.number(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.number.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.number(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+
+        </fieldset>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-outline-info") }}
+        </div>
+    </form>
+</div>
+{% endblock content %}

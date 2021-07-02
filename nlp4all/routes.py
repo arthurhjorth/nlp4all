@@ -206,8 +206,8 @@ def project_deprecated():
         analysis = BayesianAnalysis(user = userid, name=name, project=project.id, data = {"counts" : 0, "words" : {}}, shared=form.shared.data, tweets=analysis_tweets, annotation_tags={}, annotate=form.annotate.data )
         db.session.add(analysis)
         db.session.commit()
-        return(redirect(url_for('project', project=project_id)))
-    return render_template('project.html', title='About', project=project, analyses=analyses, form=form)
+        return(redirect(url_for('project_deprecated', project=project_id)))
+    return render_template('project_deprecated.html', title='About', project=project, analyses=analyses, form=form)
 
 
 @app.route("/test", methods=['GET', 'POST'])
