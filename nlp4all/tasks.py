@@ -1,10 +1,12 @@
-from nlp4all.models import Tweet
-from nlp4all import celery_app
+import time
+from nlp4all.models import Tweet, D2VModel
+from nlp4all import celery_app, db
 from flask import flash
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from gensim.models.callbacks import CallbackAny2Vec
 import pickle
+from sqlalchemy.orm import load_only
 
 
 @celery_app.task
@@ -86,3 +88,20 @@ from time import sleep
 def addition(a, b):
     sleep(5)
     return a + b
+
+
+@celery_app.task
+def make_public(model_id):
+    db_model = D2VModel.query.options(load_only(*['id','public'])).filter_by(id=model_id).first()
+    if db_model.public == 'no':
+        db_model.public = 'all'
+        print(time.time())
+        db.session.commit()
+        print(time.time())
+        flash('Your model is now public and can be seen by any user of the site.', 'info')
+    elif db_model.public == 'all':
+        db_model.public = 'no'
+        print(time.time())
+        db.session.commit()
+        print(time.time())
+        flash("Your model isn't public anymore and can be seen and used only by you.", 'info')

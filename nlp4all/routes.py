@@ -8,14 +8,14 @@ from nlp4all import app, db, bcrypt, mail, celery_app
 from nlp4all.forms import *
 from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag,\
     BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel
+from nlp4all.utils import get_user_projects, get_user_project_analyses, get_closest_tweets
+from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat, make_public
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_mail import Message
 import datetime
 import json, ast
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm import load_only
-from nlp4all.utils import get_user_projects, get_user_project_analyses, get_closest_tweets
-from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat
 import operator
 import re
 import numpy as np
@@ -1560,6 +1560,15 @@ def word_embedding():
                            show_form=show_form_param, word_most_sim_form=word_most_sim_form,
                            most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim,
                            submit_tweet_form=submit_tweet_form, closest_tweets=closest_tweets)
+
+
+@app.route("/word_embedding/change_public", methods=['GET', 'POST'])
+@login_required
+def word_embedding_change_public():
+    # need that only the owner of the model can publish/unpublish it
+    model_id = request.args.get('model', None, type=int)
+    make_public(model_id)  # add .delay (I think) to call it in the background
+    return redirect(url_for('word_embedding', model=model_id))
 
 
 @app.route('/models_comparison', methods=['GET', 'POST'])

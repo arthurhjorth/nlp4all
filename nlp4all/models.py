@@ -660,7 +660,7 @@ class D2VModel(db.Model):
     dim = db.Column(db.Integer)
     description = db.Column(db.String(50))
     project = db.Column(db.Integer, db.ForeignKey("project.id"))
-    public = db.Column(db.String)
+    public = db.Column(db.String)  # can be 'no' or 'all'
     model = db.Column(db.PickleType)
     #model = db.Column(db.Integer, db.ForeignKey("d2_v_model_backend.id"))
 
