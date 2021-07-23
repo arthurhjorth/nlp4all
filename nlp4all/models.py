@@ -20,8 +20,8 @@ class BayesianRobot(db.Model):
     parent = db.Column(db.Integer, db.ForeignKey('bayesian_robot.id'), default=None)
     child = db.Column(db.Integer, db.ForeignKey('bayesian_robot.id'), default=None)
     analysis = db.Column(db.Integer, db.ForeignKey('bayesian_analysis.id'))
-    features = db.Column(JSON, default = {})
-    accuracy = db.Column(JSON, default = {})
+    features = db.Column(JSON, default={})
+    accuracy = db.Column(JSON, default={})
     retired = db.Column(db.Boolean, default=False)
     time_retired = db.Column(db.DateTime)
 
@@ -31,6 +31,7 @@ class BayesianRobot(db.Model):
         new_robot.analysis = self.analysis
         new_robot.features = self.features
         new_robot.parent = self.id
+        # missing self.child = new_robot.id ?
         return(new_robot)
     
 
@@ -397,7 +398,7 @@ class Tweet(db.Model):
     words = db.Column(JSON)
     hashtags = db.Column(JSON)
     tags = db.relationship('TweetTag')
-    links = db.Column(JSON)
+    links = db.Column(JSON) 
     mentions = db.Column(JSON)
     url = db.Column(db.String(200), unique=True)
     text = db.Column(db.String(300))
@@ -415,7 +416,7 @@ class BayesianAnalysis(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user = db.Column(db.Integer, db.ForeignKey('user.id'))
     name = db.Column(db.String(50))
-    tags = db.relationship('TweetTag') # this also tells us which tweets
+    tags = db.relationship('TweetTag')  # this also tells us which tweets
     data = db.Column(JSON)
     project = db.Column(db.Integer, db.ForeignKey('project.id'))
     robots = db.relationship('BayesianRobot')

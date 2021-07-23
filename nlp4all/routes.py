@@ -52,7 +52,6 @@ def robot_summary():
 
 @app.route("/data_table")
 def data_table():
-    my_projects = get_user_projects(current_user) 
     test_data = [{'a' : 25, 'b': 200, 'c': 400}]
     test_data.append({'a' : 25, 'b': 200, 'c': 80})
     return render_template('data_table.html', table_data=test_data)
@@ -285,7 +284,7 @@ def robot():
 
 @app.route("/shared_analysis_view", methods=['GET', 'POST'])
 def shared_analysis_view():
-    analysis_id = request.args.getq('analysis', 0, type=int)
+    analysis_id = request.args.get('analysis', 0, type=int)
     tweet_info = {}
     all_words = []
     if analysis_id != 0:
@@ -355,7 +354,7 @@ def analysis():
         return redirect(url_for('login'))
     analysis_id = request.args.get('analysis', 1, type=int)
     analysis = BayesianAnalysis.query.get(analysis_id)
-    project = Project.query.get(analysis.project)
+    project = Project.query.options(load_only('id')).get(analysis.project)
     if 'tag' in request.form.to_dict():
         # category = TweetTagCategory.query.get(int(form.choices.data))
         tag_info = ast.literal_eval(request.form['tag'])
@@ -395,8 +394,7 @@ def analysis():
     #     owned = True
     # if owned == False:
     #     return redirect(url_for('home'))
-    categories = TweetTagCategory.query.filter(TweetTagCategory.id.in_([p.id for p in project.categories])).all() # TODO: pretty sure we can just get project.categories
-    tweets = project.tweets
+    categories = project.categories  # TODO: pretty sure we can just get project.categories
     the_tweet = None
     if analysis.shared:
         completed_tweets = [t.tweet for t in analysis.tags if t.user == current_user.id]
@@ -408,12 +406,16 @@ def analysis():
             flash('Du er kommet igennem alle tweetsene. Vent på resten af klassen nu :)', 'success')
             the_tweet = Tweet(full_text = "", words = [])
     else:
+        # quicker to load, but changes the repartition of selected tweets (as some cats are bigger than others)
+        cat = sample(project.categories, 1)[0].id
+        tweets = Tweet.query.filter_by(category=cat).all()
+        #tweets = project.tweets
         the_tweet = sample(tweets, 1)[0]
     form = TaggingForm()
-    form.choices.choices  = [( str(c.id), c.name ) for c in categories]
+    form.choices.choices = [( str(c.id), c.name ) for c in categories]
     number_of_tagged = len(analysis.tags)
     data = {}
-    data['number_of_tagged']  = number_of_tagged
+    data['number_of_tagged'] = number_of_tagged
     data['words'], data['predictions'] = analysis.get_predictions_and_words(set(the_tweet.words))
     data['word_tuples'] = nlp4all.utils.create_css_info(data['words'], the_tweet.full_text, categories)
     data['chart_data'] = nlp4all.utils.create_bar_chart_data(data['predictions'], "Computeren gætter på...")
@@ -1564,6 +1566,7 @@ def word_embedding():
 @login_required
 def models_comparison():
     project = request.args.get('project', None, type=int)
+    project_name = Project.query.options(load_only("name")).filter_by(id=project).first().name
     # get models if chosen, None if not
     models_id = request.args.getlist('model')
     models = D2VModel.query.filter(D2VModel.id.in_(models_id)).all()
@@ -1578,7 +1581,7 @@ def models_comparison():
 
     if choose_models_form.choose_submit.data and choose_models_form.validate_on_submit():
         models = choose_models_form.models.data
-        return redirect(url_for('models_comparison', project=project, model=models))
+        return redirect(url_for('models_comparison', project=project, model=models, project_name=project_name))
 
     if words_sim_form.word_sim_submit.data and words_sim_form.validate_on_submit():
         word1 = words_sim_form.word1.data.lower()
@@ -1605,7 +1608,7 @@ def models_comparison():
             else:
                 flash("Word '{}' not in the vocabulary of {}".format(word, db_model.name), 'warning')
 
-    return render_template('models_comparison.html', project=project, models=models,
+    return render_template('models_comparison.html', project=project, models=models, project_name=project_name,
                            choose_models_form=choose_models_form, words_sim_form=words_sim_form,
                            word_most_sim_form=word_most_sim_form, sims=sims, most_sim_words=most_sim_words)
 

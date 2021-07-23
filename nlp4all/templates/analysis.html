@@ -52,13 +52,13 @@
 
 <div class="tab-content" id="searchTerms">
     <div class="content-section">
-        <table class="table">
-            <tr><th>Options</th></tr>
-            <tr>
+        <h4 class="border-bottom mb-4"><th>Options</th></h4>
+        <table>
             {% for tag_option in tag_options %}
+                <tr>
                 <td><form action="" method="post"><button type="submit" value="{{(tweet.id, tag_option.id)}}" name="tag">{{ tag_option.name }}</button></form></td>
+                </tr>
             {% endfor %}
-            </tr>
         </table>
     </div>
 </div>

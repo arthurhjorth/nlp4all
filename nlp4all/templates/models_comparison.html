@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
+<h1>Compare models of project: {{ project_name }}</h1>
+<p><a href="{{ url_for('project') }}?project={{ project }}">Back to project page</a></p>
 {% if models == [] %}
     <div class="content-section" id="choose_models">
         <h2>Choose the models to compare</h2>
@@ -27,7 +29,6 @@
     </div>
 
 {% else %}
-    <h1>Compare models</h1>
     <p><a href="{{ url_for('models_comparison', project=project) }}">Choose another set of models</a></p>
 
     <div class="content-section" id="compare_models">

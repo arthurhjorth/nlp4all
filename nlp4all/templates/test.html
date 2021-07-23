@@ -1,51 +1,47 @@
-<!--Size dropdown menu-->
+<html>
 <head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <style type="text/css">
+        table {
+            width:  100%;
+            border-collapse: collapse;
+        }
+        td {
+            border: 1px solid black;
+        }
+        .scrollingTable {
+            width: 30em;
+            overflow-y: auto;
+        }
+    </style>
+    <script type="text/javascript">
+        function makeTableScroll() {
+            // Constant retrieved from server-side via JSP
+            var maxRows = 4;
+
+            var table = document.getElementById('myTable');
+            var wrapper = table.parentNode;
+            var rowsInTable = table.rows.length;
+            var height = 0;
+            if (rowsInTable > maxRows) {
+                for (var i = 0; i < maxRows; i++) {
+                    height += table.rows[i].clientHeight;
+                }
+                wrapper.style.height = height + "px";
+            }
+        }
+    </script>
 </head>
-<select id="size_select">
-  <option value="option1">Kids</option>
-  <option value="option2">Youth</option>
-  <option value="option3">XS</option>
-  <option value="option4">Small</option>
-  <option value="option5">Medium</option>
-  <option value="option6">Large</option>
-</select>
-
-<!--Size dropdown content-->
-<div id="option1" class="size_chart">
-  Kids
-</div>
-<div id="option2" class="size_chart">
-  Youth
-</div>
-<div id="option3" class="size_chart">
-  XS
-</div>
-<div id="option4" class="size_chart">
-  Small
-</div>
-<div id="option5" class="size_chart">
-  Medium
-</div>
-<div id="option6" class="size_chart">
-  Large
-</div>
-
-<script>
-    $(document).ready(function(){
-
-      //hides dropdown content
-      $(".size_chart").hide();
-
-      //unhides first option content
-      $("#option1").show();
-
-      //listen to dropdown for change
-      $("#size_select").change(function(){
-        //rehide content on change
-        $('.size_chart').hide();
-        //unhides current item
-        $('#'+$(this).val()).show();
-      });
-    });
-</script>
+<body onload="makeTableScroll();">
+    <div class="scrollingTable">
+        <table id="myTable">
+            <tr>
+                <td>blah blah</td>
+                <td>blah blah</td>
+                <td>blah blah</td>
+                <td>blah blah</td>
+                <td>Lààààààà</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

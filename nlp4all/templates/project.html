@@ -35,15 +35,14 @@
         <div class="select_menu">
             <label for="proj_type">Choose the type of analysis: </label>
             <select id="proj_type">
-                <option value="shared_corpus_bay">Bayesian analysis - Shared corpus</option>
-                <option value="random_corpus_bay">Bayesian analysis - Randomized corpus</option>
+                <option value="bayesian_analysis">Bayesian analysis</option>
                 <option value="word_embedding">Word embedding analysis</option>
             </select>
         </div>
     </form>
     <p></p>
 
-    <div class="creation-form" id="shared_corpus_bay">
+    <div class="creation-form" id="bayesian_analysis">
         <legend class="border-bottom mb-4">Bayesian analysis</legend>
         <form method="POST" action="">
         {{ bayesian_form.hidden_tag() }}
@@ -61,52 +60,14 @@
                         {{ bayesian_form.name(class="form-control form-control-lg") }}
                     {% endif %}
                 </div>
-                    <div class="form-check">
-                        {{ bayesian_form.annotate(class="form-check-input") }}
-                        {{ bayesian_form.annotate.label(class="form-check-label") }}
-                    </div>
-                <div class="form-group">
-                    {{ bayesian_form.number.label(class="form-control-label") }}
-                    {% if bayesian_form.number.errors %}
-                        {{ bayesian_form.number(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in bayesian_form.number.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {{ bayesian_form.number(class="form-control form-control-lg") }}
-                    {% endif %}
+                <div class="form-check">
+                    {{ bayesian_form.annotate(class="form-check-input") }}
+                    {{ bayesian_form.annotate.label(class="form-check-label") }}
                 </div>
-            </fieldset>
-            <div class="form-group">
-                {{ bayesian_form.submit_bay(class="btn btn-outline-info") }}
-            </div>
-        </form>
-    </div>
-
-    <div class="creation-form" id="random_corpus_bay">
-        <legend class="border-bottom mb-4">Bayesian analysis</legend>
-        <form method="POST" action="">
-        {{ bayesian_form.hidden_tag() }}
-            <fieldset class="form-group">
-                <div class="form-group">
-                    {{ bayesian_form.name.label(class="form-control-label") }}
-                    {% if bayesian_form.name.errors %}
-                        {{ bayesian_form.name(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in bayesian_form.name.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {{ bayesian_form.name(class="form-control form-control-lg") }}
-                    {% endif %}
+                <div class="form-check">
+                    {{ bayesian_form.shared(class="form-check-input") }}
+                    {{ bayesian_form.shared.label(class="form-check-label") }}
                 </div>
-                    <div class="form-check">
-                        {{ bayesian_form.annotate(class="form-check-input") }}
-                        {{ bayesian_form.annotate.label(class="form-check-label") }}
-                    </div>
                 <div class="form-group">
                     {{ bayesian_form.number.label(class="form-control-label") }}
                     {% if bayesian_form.number.errors %}
@@ -218,7 +179,7 @@
       $("#analyses_list").show();
       $("#d2v_models_list").show();
       $("#select_form").show();
-      $("#shared_corpus_bay").show();
+      $("#bayesian_analysis").show();
 
       //listen to dropdown for change
       $("#proj_type").change(function(){
