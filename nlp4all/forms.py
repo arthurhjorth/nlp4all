@@ -173,7 +173,7 @@ class AddWordEmbeddingForm(FlaskForm):
     vector_size = IntegerField('Embedded vector size')
     epochs = IntegerField('Epochs')
     training_set = SelectMultipleField("Data to train on", validators=[DataRequired()])
-    public = BooleanField("Public project?")
+    public = BooleanField("Public model?")
     submit_emb = SubmitField('Create W2V Analysis')
 
 

@@ -61,9 +61,10 @@ def data_table():
 @app.route("/add_project", methods=['GET', 'POST'])
 @login_required
 def add_project():
-    #if current_user.role == 'Student':
-    #    flash('You are not allowed to create projects', 'error')
-    #    return redirect(url_for('home'))
+    teacher_role = Role.query.filter_by(name='Teacher').first()
+    if not ((teacher_role in current_user.roles) or current_user.admin):
+        flash('You are not allowed to create projects.', 'warning')
+        return redirect(url_for('home'))
     form = AddProjectForm()
     # find forst alle mulige organizations
     form.organization.choices = [( str(o.id), o.name ) for o in Organization.query.all()]
@@ -98,7 +99,7 @@ def project():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
     if not ((project.organization in current_user.organizations) or current_user.admin):
-        flash("You don't have access to this project", 'info')
+        flash("You don't have access to this project", 'warning')
         return redirect(url_for('home'))
     bay_page = request.args.get('bay_page', 1, type=int)
     analyses = BayesianAnalysis.query.options(load_only('id', 'name')).filter_by(project=project_id)\
@@ -1473,7 +1474,7 @@ def word_embedding():
     db_model = D2VModel.query.filter_by(id=model_id).first()
     project = Project.query.filter_by(id=db_model.project).first()
     if not (db_model.public or (project.organization in user.organizations) or user.admin):
-        flash("You don't have access to this model", "info")
+        flash("You don't have access to this model", "warning")
         return redirect(url_for('home'))
     project = project.id
     model = db_model.load()
@@ -1584,7 +1585,11 @@ def word_embedding_change_public():
 @login_required
 def models_comparison():
     project = request.args.get('project', None, type=int)
-    project_name = Project.query.options(load_only("name")).filter_by(id=project).first().name
+    proj = Project.query.options(load_only("name")).filter_by(id=project).first()
+    if not (proj.organization in current_user.organizations or current_user.admin):
+        flash("You don't have access to this project.", 'warning')
+        return redirect(url_for('home'))
+    project_name = proj.name
     # get models if chosen, None if not
     models_id = request.args.getlist('model')
     models = D2VModel.query.filter(D2VModel.id.in_(models_id)).all()
