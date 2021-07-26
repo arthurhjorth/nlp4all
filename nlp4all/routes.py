@@ -7,7 +7,7 @@ from flask import render_template, url_for, flash, redirect, request, abort, jso
 from nlp4all import app, db, bcrypt, mail, celery_app
 from nlp4all.forms import *
 from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag,\
-    BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel
+    BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel, Role
 from nlp4all.utils import get_user_projects, get_user_project_analyses, get_closest_tweets
 from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat, make_public
 from flask_login import login_user, current_user, logout_user, login_required
@@ -38,9 +38,10 @@ def home():
     page = request.args.get('page', 1, type=int)
     analyses = D2VModel.query.options(load_only('id', 'name', 'description', 'public')).filter_by(public='all')\
                .paginate(page, app.config['MODELS_PER_PAGE'], False)
-    #create_project = None
-    #if current_user.roles in ['Teacher', 'Admin']:
-    create_project = url_for('add_project')
+    create_project = None
+    teacher_role = Role.query.filter_by(name='Teacher').first()
+    if teacher_role in current_user.roles or current_user.admin:  # if user is a teacher or an admin
+        create_project = url_for('add_project')
     return render_template('home.html', projects=my_projects, analyses=analyses.items, create_project=create_project)
 
 @app.route("/robot_summary", methods=['GET', 'POST'])
@@ -96,6 +97,9 @@ def public_models():
 def project():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
+    if not ((project.organization in current_user.organizations) or current_user.admin):
+        flash("You don't have access to this project", 'info')
+        return redirect(url_for('home'))
     bay_page = request.args.get('bay_page', 1, type=int)
     analyses = BayesianAnalysis.query.options(load_only('id', 'name')).filter_by(project=project_id)\
                .paginate(bay_page, app.config['MODELS_PER_PAGE'], False).items
@@ -1464,11 +1468,15 @@ def scatter_plot_3D():
 @login_required
 def word_embedding():
     # form to display what you want
+    user = current_user
     model_id = request.args.get('model', None, type=int)
     db_model = D2VModel.query.filter_by(id=model_id).first()
+    project = Project.query.filter_by(id=db_model.project).first()
+    if not (db_model.public or (project.organization in user.organizations) or user.admin):
+        flash("You don't have access to this model", "info")
+        return redirect(url_for('home'))
+    project = project.id
     model = db_model.load()
-    user = current_user
-    project = D2VModel.query.filter_by(id=model_id).first().project
     display_form = DisplayWordEmbeddingForm(nb_vecs=50)
     display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat
                                           in Project.query.filter_by(id=project).first().categories]

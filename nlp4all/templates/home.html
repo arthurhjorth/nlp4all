@@ -11,12 +11,12 @@
             <a class="nav-item nav-link" href="{{ url_for('project') }}?project={{ p.id }}">{{ p.name }}</a>
             <p>{{ p.description }} </p>
         {% endfor %}
-        <p>
-            {% if create_project != None %}
+        {% if create_project != None %}
+            <p>
                 <p class="border-top mb-4"></p>
                 <a class="nav-item nav-link" href={{create_project}}>Create a new project</a>
-            {% endif %}
-        </p>
+            </p>
+        {% endif %}
     </div>
 
     <div class="content-section">
