@@ -1467,6 +1467,7 @@ def word_embedding():
     model_id = request.args.get('model', None, type=int)
     db_model = D2VModel.query.filter_by(id=model_id).first()
     model = db_model.load()
+    user = current_user
     project = D2VModel.query.filter_by(id=model_id).first().project
     display_form = DisplayWordEmbeddingForm(nb_vecs=50)
     display_form.displayed_set.choices = [(str(cat.id), cat.name) for cat
@@ -1538,14 +1539,14 @@ def word_embedding():
         elif reduced_dv.state == 'SUCCESS':
             data_x, data_y, data_z, labels = reduced_dv.get()
             if data_z != []:
-                return render_template("word_embedding.html", title='Display vectors', project=project,
+                return render_template("word_embedding.html", title='Display vectors', project=project, user=user,
                                        db_model=db_model, display_form=display_form,
                                        show_form=show_form, data_x=data_x, data_y=data_y, data_z=data_z,
                                        labels=json.dumps(labels), word_most_sim_form=word_most_sim_form,
                                        most_sim_words=most_sim_words, word_sim_form=word_sim_form,
                                        word_sim=word_sim, submit_tweet_form=submit_tweet_form,
                                        closest_tweets=closest_tweets)
-            return render_template("word_embedding.html", title='Display vectors', project=project,
+            return render_template("word_embedding.html", title='Display vectors', project=project, user=user,
                                    db_model=db_model, display_form=display_form,
                                    show_form=show_form, data_x=data_x, data_y=data_y,labels=json.dumps(labels),
                                    word_most_sim_form=word_most_sim_form, most_sim_words=most_sim_words,
@@ -1555,7 +1556,7 @@ def word_embedding():
             flash('Something went wrong somewhere... :(', 'error')
 
     show_form_param = show_form if task_id else None
-    return render_template("word_embedding.html", title='Word embedding', project=project,
+    return render_template("word_embedding.html", title='Word embedding', project=project, user=user,
                            db_model=db_model, display_form=display_form,
                            show_form=show_form_param, word_most_sim_form=word_most_sim_form,
                            most_sim_words=most_sim_words, word_sim_form=word_sim_form, word_sim=word_sim,

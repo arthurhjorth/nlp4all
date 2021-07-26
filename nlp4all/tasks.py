@@ -104,4 +104,4 @@ def make_public(model_id):
         print(time.time())
         db.session.commit()
         print(time.time())
-        flash("Your model isn't public anymore and can be seen and used only by you.", 'info')
+        flash("Your model isn't public anymore and can be seen and used only by users from the project.", 'info')

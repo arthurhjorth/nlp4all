@@ -3,11 +3,13 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <h1>Model Title: {{ db_model.name }}</h1>
     <p><a href="{{ url_for('project') }}?project={{ project }}">Back to project page</a></p>
-    <!--{% if db_model.public == 'no' %}
-    <p><a href="{{ url_for('word_embedding_change_public', model=db_model.id) }}">Make the model public</a></p>
-    {% else %}
-    <p><a href="{{ url_for('word_embedding_change_public', model=db_model.id) }}">Make the model private</a></p>
-    {% endif %}-->
+    {% if project.owner == user or user.admin %}
+        {% if db_model.public == 'no' %}
+        <p><a href="{{ url_for('word_embedding_change_public', model=db_model.id) }}">Make the model public</a></p>
+        {% else %}
+        <p><a href="{{ url_for('word_embedding_change_public', model=db_model.id) }}">Make the model private</a></p>
+        {% endif %}
+    {% endif %}
     <h1>Word embedding analysis tools</h1>
     <div class="content-section">
         <h2>Words similarity</h2>
