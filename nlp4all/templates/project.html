@@ -26,9 +26,6 @@
     {% endif %}
 </div>
 
-{% for p in projects %}
-    <a class="nav-item nav-link" href="{{ url_for('project') }}?project={{ p.id }}">p.name</a>
-{% endfor %}
 <div class="content-section" id="select_form">
 <h2>Create New Analysis</h2>
     <form method="POST" action="">
@@ -167,6 +164,62 @@
         </form>
     </div>
 </div>
+
+<div class="content-section" id="import_form">
+    <h2>Import public models</h2>
+    <p class="border-bottom mb-8">
+        You can import public models to your project to use them or to compare them with your owns.
+    </p>
+
+    <form method="POST" action="">
+        {{ import_form.hidden_tag() }}
+            <fieldset class="form-group">
+                <div class="form-group">
+                    {{ import_form.chosen_model.label(class="form-control-label") }}
+                    {% if import_form.chosen_model.errors %}
+                        {{ import_form.chosen_model(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in import_form.chosen_model.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ import_form.chosen_model(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ import_form.name.label(class="form-control-label") }}
+                    {% if import_form.name.errors %}
+                        {{ import_form.name(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in import_form.name.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ import_form.name(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ import_form.description.label(class="form-control-label") }}
+                    {% if import_form.description.errors %}
+                        {{ import_form.description(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in import_form.description.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ import_form.description(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+            </fieldset>
+            <div class="form-group">
+                {{ import_form.import_submit(class="btn btn-outline-info") }}
+            </div>
+        </form>
+</div>
+
 <script>
     $(document).ready(function(){
 
@@ -180,6 +233,7 @@
       $("#d2v_models_list").show();
       $("#select_form").show();
       $("#bayesian_analysis").show();
+      $("#import_form").show();
 
       //listen to dropdown for change
       $("#proj_type").change(function(){

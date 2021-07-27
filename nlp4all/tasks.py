@@ -105,3 +105,14 @@ def make_public(model_id):
         db.session.commit()
         print(time.time())
         flash("Your model isn't public anymore and can be seen and used only by users from the project.", 'info')
+
+
+@celery_app.task
+def import_d2v_model(project_id, db_model, name='', description=''):
+    new_name = name if name != '' else db_model.name
+    new_desc = description if description != '' else db_model.description
+    # deep copy of the previous model => change if too many users
+    new_model = D2VModel(name=new_name, dim=db_model.dim, description=new_desc, project=project_id,
+                         public='no', model=db_model.model)
+    db.session.add(new_model)
+    db.session.commit()

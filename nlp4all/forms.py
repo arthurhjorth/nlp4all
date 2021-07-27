@@ -209,3 +209,10 @@ class SubmitTweetForm(FlaskForm):
     text = StringField('Write your tweet', validators=[DataRequired()])
     topn = IntegerField('Number of displayed tweets')
     tweet_submit = SubmitField('Find the closest tweets')
+
+
+class ImportModelForm(FlaskForm):
+    chosen_model = SelectField('Choose the public models you want to import', validators=[DataRequired()])
+    name = StringField('Rename the model (optional)')
+    description = StringField('Change description (optional)')
+    import_submit = SubmitField('Import')

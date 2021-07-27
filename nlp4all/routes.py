@@ -9,7 +9,7 @@ from nlp4all.forms import *
 from nlp4all.models import User, Organization, Project, BayesianAnalysis, TweetTagCategory, TweetTag,\
     BayesianRobot, Tweet, ConfusionMatrix, TweetAnnotation, D2VModel, Role
 from nlp4all.utils import get_user_projects, get_user_project_analyses, get_closest_tweets
-from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat, make_public
+from nlp4all.tasks import reduce_dimension, train_d2v, separate_by_cat, make_public, import_d2v_model
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_mail import Message
 import datetime
@@ -111,6 +111,9 @@ def project():
     bayesian_form = AddBayesianAnalysisForm()
     embedding_form = AddWordEmbeddingForm(vector_size=50, epochs=40, d2v=True)
     embedding_form.training_set.choices = [(str(cat.id), cat.name) for cat in project.categories]
+    import_form = ImportModelForm()
+    import_form.chosen_model.choices = [(str(model.id), model.name) for model in
+                                         D2VModel.query.options(load_only('name')).filter_by(public='all').all()]
 
     if bayesian_form.submit_bay.data and bayesian_form.validate_on_submit():
         userid = current_user.id  # useful?
@@ -168,8 +171,18 @@ def project():
             #
         #return(redirect(url_for('project', project=project_id)))
 
+    if import_form.import_submit.data and import_form.validate_on_submit():
+        model_id = import_form.chosen_model.data
+        model_to_import = D2VModel.query.filter_by(id=int(model_id)).first()
+        name = import_form.name.data
+        description = import_form.description.data
+        import_d2v_model(project_id, model_to_import, name=name, description=description)
+        flash('The system is importing the model to your project. You might need to wait a little bit before it'
+              ' appears in your available models.', 'success')
+
     return render_template('project.html', title='Project', project=project, analyses=analyses,
-                           d2v_models=d2v_models, bayesian_form=bayesian_form, embedding_form=embedding_form)
+                           d2v_models=d2v_models, bayesian_form=bayesian_form, embedding_form=embedding_form,
+                           import_form=import_form)
 
 
 @app.route("/project/d2v_models", methods=['GET'])
