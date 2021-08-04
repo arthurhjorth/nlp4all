@@ -58,7 +58,7 @@ def clean_word(aword):  # added
 
 data_dir = 'tweet_data/'
 english_files = [f for f in os.listdir(data_dir) if 'json_out.json' in f]
-danish_data = '/Users/Boulot/nlp4all/tweet_data/Big data/DanishPartyTweets.json'
+danish_data = 'tweet_data/AllPartyTweets.json'
 
 existing_tag_names = []
 
