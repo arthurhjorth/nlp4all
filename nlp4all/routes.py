@@ -98,7 +98,8 @@ def public_models():
 def project():
     project_id = request.args.get('project', None, type=int)
     project = Project.query.get(project_id)
-    if not ((project.organization in current_user.organizations) or current_user.admin):
+    if not ((Organization.query.filter_by(id=project.organization).first() in current_user.organizations)\
+            or current_user.admin):
         flash("You don't have access to this project", 'warning')
         return redirect(url_for('home'))
     bay_page = request.args.get('bay_page', 1, type=int)
@@ -114,6 +115,7 @@ def project():
     import_form = ImportModelForm()
     import_form.chosen_model.choices = [(str(model.id), model.name) for model in
                                          D2VModel.query.options(load_only('name')).filter_by(public='all').all()]
+    show_import_form = (current_user == project.owner) | (current_user.admin)
 
     if bayesian_form.submit_bay.data and bayesian_form.validate_on_submit():
         userid = current_user.id  # useful?
@@ -182,7 +184,7 @@ def project():
 
     return render_template('project.html', title='Project', project=project, analyses=analyses,
                            d2v_models=d2v_models, bayesian_form=bayesian_form, embedding_form=embedding_form,
-                           import_form=import_form)
+                           import_form=import_form, show_import_form=show_import_form)
 
 
 @app.route("/project/d2v_models", methods=['GET'])
@@ -1486,7 +1488,8 @@ def word_embedding():
     model_id = request.args.get('model', None, type=int)
     db_model = D2VModel.query.filter_by(id=model_id).first()
     project = Project.query.filter_by(id=db_model.project).first()
-    if not (db_model.public or (project.organization in user.organizations) or user.admin):
+    if not (db_model.public or (Organization.query.filter_by(id=project.organization).first() in user.organizations)\
+            or user.admin):
         flash("You don't have access to this model", "warning")
         return redirect(url_for('home'))
     project = project.id
@@ -1599,7 +1602,8 @@ def word_embedding_change_public():
 def models_comparison():
     project = request.args.get('project', None, type=int)
     proj = Project.query.options(load_only("name")).filter_by(id=project).first()
-    if not (proj.organization in current_user.organizations or current_user.admin):
+    if not (Organization.query.filter_by(id=proj.organization).first() in current_user.organizations\
+            or current_user.admin):
         flash("You don't have access to this project.", 'warning')
         return redirect(url_for('home'))
     project_name = proj.name

@@ -164,7 +164,7 @@
         </form>
     </div>
 </div>
-
+{% if show_import_form %}
 <div class="content-section" id="import_form">
     <h2>Import public models</h2>
     <p class="border-bottom mb-8">
@@ -219,6 +219,7 @@
             </div>
         </form>
 </div>
+{% endif %}
 
 <script>
     $(document).ready(function(){
@@ -246,6 +247,7 @@
         $("#d2v_models_list").show();
         $("#select_form").show();
         $('#'+$(this).val()).show();
+        $("#import_form").show();
       });
     });
 </script>
