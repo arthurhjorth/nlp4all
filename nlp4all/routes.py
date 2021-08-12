@@ -40,9 +40,11 @@ def home():
                .paginate(page, app.config['MODELS_PER_PAGE'], False)
     create_project = None
     teacher_role = Role.query.filter_by(name='Teacher').first()
-    if teacher_role in current_user.roles or current_user.admin:  # if user is a teacher or an admin
+    is_admin = current_user.admin
+    if teacher_role in current_user.roles or is_admin:  # if user is a teacher or an admin
         create_project = url_for('add_project')
-    return render_template('home.html', projects=my_projects, analyses=analyses.items, create_project=create_project)
+    return render_template('home.html', projects=my_projects, analyses=analyses.items, create_project=create_project,
+                           is_admin=is_admin)
 
 @app.route("/robot_summary", methods=['GET', 'POST'])
 def robot_summary():
@@ -1651,6 +1653,30 @@ def models_comparison():
     return render_template('models_comparison.html', project=project, models=models, project_name=project_name,
                            choose_models_form=choose_models_form, words_sim_form=words_sim_form,
                            word_most_sim_form=word_most_sim_form, sims=sims, most_sim_words=most_sim_words)
+
+
+@app.route('/import_gensim_models', methods=['GET', 'POST'])
+@login_required
+def import_gensim_models():
+    if not current_user.admin:
+        flash('You are not allowed to import outside models. Ask an admin to do it for you', 'warning')
+        return redirect(url_for('home'))
+
+    import_gensim_models_form = ImportGensimModelForm()
+
+    if import_gensim_models_form.import_gensim_submit.data and import_gensim_models_form.validate_on_submit():
+        gensim_model = Doc2Vec.load(import_gensim_models_form.path.data)
+        dim = gensim_model.vector_size
+        db_model = D2VModel(name=import_gensim_models_form.name.data, dim=dim,
+                            description=import_gensim_models_form.description.data, project=1,
+                            public=import_gensim_models_form.public.data)
+        db_model.save(gensim_model)
+        db.session.add(db_model)
+        db.session.commit()
+        flash('Your model have been added to project 1', 'success')
+        redirect(url_for('import_gensim_models'))
+
+    return render_template('import_gensim_models.html', import_gensim_models_form=import_gensim_models_form)
 
 
 from nlp4all.tasks import addition

@@ -216,3 +216,11 @@ class ImportModelForm(FlaskForm):
     name = StringField('Rename the model (optional)')
     description = StringField('Change description (optional)')
     import_submit = SubmitField('Import')
+
+
+class ImportGensimModelForm(FlaskForm):
+    path = StringField('Indicate the path to the model you want to import', validators=[DataRequired()])
+    name = StringField('Name the model', validators=[DataRequired()])
+    description = StringField('Provide a quick description of your model')
+    public = BooleanField("Public model?")
+    import_gensim_submit = SubmitField('Import')

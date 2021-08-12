@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="content-section">
+        <form method="POST" action="">
+            {{ import_gensim_models_form.hidden_tag() }}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Import gensim model</legend>
+                <div class="form-group">
+                    {{ import_gensim_models_form.path.label(class="form-control-label") }}
+                    {% if import_gensim_models_form.path.errors %}
+                        {{ import_gensim_models_form.path(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in import_gensim_models_form.path.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ import_gensim_models_form.path(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ import_gensim_models_form.name.label(class="form-control-label") }}
+                    {% if import_gensim_models_form.name.errors %}
+                        {{ import_gensim_models_form.name(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in import_gensim_models_form.name.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ import_gensim_models_form.name(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ import_gensim_models_form.description.label(class="form-control-label") }}
+                    {% if import_gensim_models_form.description.errors %}
+                        {{ import_gensim_models_form.description(class="form-control form-control-lg is-invalid") }}
+                        <div class="invalid-feedback">
+                            {% for error in import_gensim_models_form.description.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        {{ import_gensim_models_form.description(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-check">
+                    {{ import_gensim_models_form.public(class="form-check-input") }}
+                    {{ import_gensim_models_form.public.label(class="form-check-label") }}
+                </div>
+            </fieldset>
+            <div class="form-group">
+                {{ import_gensim_models_form.import_gensim_submit(class="btn btn-outline-info") }}
+            </div>
+        </form>
+    </div>
+
+{% endblock content %}
